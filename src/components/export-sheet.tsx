@@ -109,7 +109,7 @@ export function ExportSheet(handle: Handle<ExportSheetProps>) {
         >
           {status === 'ready' ? (
             <>
-              <BrandMark size={84} className="export-celebrate-art" variant="share" />
+              <BrandMark size={84} className="export-celebrate-art" />
               <h3>Done! Your video is ready</h3>
               <p className="muted sheet-lede">
                 {formatFileInfo(fileExtension, fileSizeBytes)} — it stays on this device until you

@@ -373,7 +373,7 @@ export function AboutPage(handle: Handle) {
 
         <div className="about-body">
           <div className="about-hero" aria-hidden="true">
-            <BrandMark size={96} className="brand-hero-art" variant="icon" />
+            <BrandMark size={96} className="brand-hero-art" />
           </div>
           <h1>Clipcam</h1>
 

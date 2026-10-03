@@ -1,16 +1,26 @@
-/* Loaded after first paint — keeps ~74KB of woff2 off the LCP path. */
+/* Loaded after first paint — keeps the woff2 off the LCP path. Self-hosted
+   so the installed app renders the same type offline. */
 @font-face {
-  font-family: 'DM Sans';
+  font-family: 'Martian Mono';
   font-style: normal;
-  font-weight: 400 700;
+  font-weight: 100 800;
+  font-stretch: 75% 112.5%;
   font-display: swap;
-  src: url('/fonts/dm-sans.woff2') format('woff2');
+  src: url('/fonts/martian-mono.woff2') format('woff2');
 }
 
 @font-face {
-  font-family: 'Fraunces';
+  font-family: 'Barlow Condensed';
   font-style: normal;
-  font-weight: 500 800;
+  font-weight: 600;
   font-display: swap;
-  src: url('/fonts/fraunces.woff2') format('woff2');
+  src: url('/fonts/barlow-condensed-600.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/barlow-condensed-700.woff2') format('woff2');
 }

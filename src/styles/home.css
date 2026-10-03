@@ -182,7 +182,7 @@
 }
 
 .home-screen .brand span {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .home-screen .lede {
@@ -311,7 +311,7 @@
 }
 
 .slot-number {
-  color: var(--accent);
+  color: var(--accent-text);
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -465,7 +465,7 @@
 }
 
 .storage-popover a {
-  color: var(--accent);
+  color: var(--accent-text);
   font-weight: 700;
   text-decoration: underline;
   text-underline-offset: 2px;
@@ -502,7 +502,7 @@
   height: 28px;
   border-radius: 8px;
   background: color-mix(in srgb, var(--accent) 18%, transparent);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .install-hint-dismiss {
@@ -585,7 +585,7 @@
 }
 
 .storage-banner a {
-  color: var(--accent);
+  color: var(--accent-text);
   font-weight: 700;
   text-decoration: underline;
   text-underline-offset: 2px;
@@ -660,7 +660,7 @@
 }
 
 .about-screen h1 span {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .video-quality-picker {
@@ -872,7 +872,7 @@
 }
 
 .about-section a {
-  color: var(--accent);
+  color: var(--accent-text);
   font-weight: 600;
   text-decoration: underline;
   text-underline-offset: 2px;
@@ -1033,7 +1033,7 @@
 }
 
 .tour-card-teaser svg {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .tour-card-copy {

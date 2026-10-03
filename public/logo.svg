@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Clipcam">
+  <rect width="512" height="512" rx="112" fill="#0B0D10"/>
+  <!-- The pass: white ticket with a perforated stub on the right. -->
+  <path fill="#FFFFFF" d="M112 148h208a20 20 0 0 0 40 0h40a16 16 0 0 1 16 16v184a16 16 0 0 1-16 16h-40a20 20 0 0 0-40 0H112a16 16 0 0 1-16-16V164a16 16 0 0 1 16-16z"/>
+  <path d="M340 186v140" stroke="#0B0D10" stroke-width="6" stroke-linecap="round" stroke-dasharray="2 14"/>
+  <!-- Record lens: the one alert yellow. -->
+  <circle cx="208" cy="256" r="66" fill="#FFD400"/>
+  <circle cx="208" cy="256" r="28" fill="#0B0D10"/>
+  <!-- Stub barcode. -->
+  <g fill="#0B0D10">
+    <rect x="362" y="196" width="10" height="120"/>
+    <rect x="380" y="196" width="5" height="120"/>
+    <rect x="391" y="196" width="12" height="120"/>
+  </g>
+</svg>
