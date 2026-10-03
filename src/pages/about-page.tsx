@@ -3,9 +3,6 @@ import { on } from 'remix/component'
 import { IconBack } from '../components/icons'
 import { BrandMark } from '../components/brand-mark'
 import { RecordingHealthPanel } from '../components/recording-health-panel'
-import { RestoreSheet } from '../components/restore-sheet'
-import { SharePlusSheet } from '../components/share-plus-sheet'
-import { UpsellSheet } from '../components/upsell-sheet'
 import { VideoQualityPicker } from '../components/video-quality-picker'
 import {
   checkForUpdates,
@@ -100,13 +97,11 @@ interface AboutData {
   /** Largest first. */
   projectSizes: Array<{ id: string; name: string; bytes: number }>
   orphanBytes: number
-  /** `null` until settings load so High is not locked on first paint. */
-  plus: boolean | null
   videoQuality: VideoQualityPreset
 }
 
-/** Last loaded About settings, kept across mounts so Plus/quality do not
- * flash the free-plan picker when navigating back. */
+/** Last loaded About settings, kept across mounts so quality does not
+ * flash the default when navigating back. */
 let lastAboutData: AboutData | null = null
 
 async function loadAboutData(): Promise<AboutData> {
@@ -128,8 +123,7 @@ async function loadAboutData(): Promise<AboutData> {
       }))
       .sort((a, b) => b.bytes - a.bytes),
     orphanBytes: scan.orphans.bytes,
-    plus: settings.watermarkRemoved === true,
-    videoQuality: resolveVideoQuality(settings.videoQuality, settings.watermarkRemoved === true),
+    videoQuality: resolveVideoQuality(settings.videoQuality),
   }
 }
 
@@ -150,12 +144,8 @@ export function AboutPage(handle: Handle) {
     exportCacheBytes: 0,
     projectSizes: [],
     orphanBytes: 0,
-    plus: null,
-    videoQuality: 'standard',
+    videoQuality: 'high',
   }
-  let sharingPlus = false
-  let upselling = false
-  let restoring = false
   let updateStatus: UpdateStatus = 'idle'
   let cacheStatus: string | null = null
   let clearingCache = false
@@ -350,7 +340,7 @@ export function AboutPage(handle: Handle) {
   }
 
   return () => {
-    const { storage, exportCacheBytes, projectSizes, orphanBytes, plus, videoQuality } = data
+    const { storage, exportCacheBytes, projectSizes, orphanBytes, videoQuality } = data
     const breakdown = storage
       ? storageBreakdown(storage, {
           projectsBytes: projectSizes.reduce((sum, project) => sum + project.bytes, 0),
@@ -397,28 +387,6 @@ export function AboutPage(handle: Handle) {
           <h1>
             Kody <span>Video</span>
           </h1>
-
-          {plus ? (
-            <section className="about-section">
-              <h2>Kody Video Plus</h2>
-              <p>
-                This device is unlocked. To use Plus on a second phone or computer, show a short
-                code and QR — the other device opens{' '}
-                <a href="/unlocked">kody.video/unlocked</a> (same idea as{' '}
-                <a href="/receive">kody.video/receive</a>). No Stripe receipt required.
-              </p>
-              <button
-                type="button"
-                className="btn btn-ghost"
-                mix={on('click', () => {
-                  sharingPlus = true
-                  void handle.update()
-                })}
-              >
-                Use Plus on another device
-              </button>
-            </section>
-          ) : null}
 
           <section className="about-section">
             <h2>Free &amp; open source</h2>
@@ -489,12 +457,11 @@ export function AboutPage(handle: Handle) {
             <p>
               No accounts, no uploads, no cross-site tracking. Clips live in this browser&rsquo;s
               storage until you export and share them yourself. The app&rsquo;s only own network
-              traffic: Stripe checkout and its purchase verification if you buy the watermark
-              removal, anonymous crash reports (error and stack trace only — never your media) when
+              traffic: anonymous crash reports (error and stack trace only — never your media) when
               something breaks, cookieless page-view counts via Fathom Analytics, the tour video
               streaming from this app&rsquo;s own domain if you tap play on it, and — only if you
               tap Send to device — a short-lived matchmaking room so two browsers can find each
-              other, a short-lived restore code if you share Plus with another device, and — only
+              other, and — only
               if you tap Send under Recording health — that counters-only recording report. Clips
               still never upload.
             </p>
@@ -518,16 +485,11 @@ export function AboutPage(handle: Handle) {
             <h2>Video quality</h2>
             <p>
               New clips only — already-recorded takes stay as they are. Every option stays at 30
-              frames a second so recording does not drop frames or get janky. Without Plus, new
-              clips record at Standard (720p). High (1080p) is a Kody Video Plus perk.
+              frames a second so recording does not drop frames or get janky. New clips record at
+              High (1080p) unless you pick a smaller size.
             </p>
             <VideoQualityPicker
               value={videoQuality}
-              plus={plus}
-              onUpsell={() => {
-                upselling = true
-                void handle.update()
-              }}
               onChange={(next) => {
                 data = { ...data, videoQuality: next }
                 lastAboutData = data
@@ -622,7 +584,7 @@ export function AboutPage(handle: Handle) {
             <p>
               Every project can be saved as a single <code>.kodyvideo</code> file (⋯ →{' '}
               <strong>Save backup</strong> on the home screen) — a safety net, and the way to move
-              a project between devices. Plus can also <strong>Send to device</strong> over the
+              a project between devices. You can also <strong>Send to device</strong> over the
               local network (the other device opens{' '}
               <a href="/receive">kody.video/receive</a>). Restore a backup here, or drop the file
               anywhere in the app:
@@ -739,40 +701,6 @@ export function AboutPage(handle: Handle) {
             </p>
           </section>
         </div>
-        {sharingPlus ? (
-          <SharePlusSheet
-            onClose={() => {
-              sharingPlus = false
-              void handle.update()
-            }}
-          />
-        ) : null}
-        {upselling ? (
-          <UpsellSheet
-            onClose={() => {
-              upselling = false
-              void handle.update()
-            }}
-            onRestore={() => {
-              upselling = false
-              restoring = true
-              void handle.update()
-            }}
-          />
-        ) : null}
-        {restoring ? (
-          <RestoreSheet
-            onClose={() => {
-              restoring = false
-              void handle.update()
-            }}
-            onRestored={() => {
-              restoring = false
-              void handle.update()
-              void refresh()
-            }}
-          />
-        ) : null}
       </div>
     )
   }
