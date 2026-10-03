@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { markWatermarkRemoved } from './entitlement'
 import { lockOrientationFromFirstClip } from './orientation-lock'
 import { setPlatformOverridesForTests } from './platform'
 import { __resetDbForTests, addClip, createProject, getProject } from './storage'
@@ -11,7 +10,6 @@ function fakeBlob(label: string): Blob {
 describe('lockOrientationFromFirstClip', () => {
   beforeEach(async () => {
     await __resetDbForTests()
-    await markWatermarkRemoved('cs_test_lock')
   })
 
   afterEach(() => {
