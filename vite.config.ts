@@ -1,0 +1,249 @@
+import { copyFile, writeFile } from 'node:fs/promises'
+import { defineConfig } from 'vite'
+import { VitePWA } from 'vite-plugin-pwa'
+import { sentryVitePlugin } from '@sentry/vite-plugin'
+import { syncApiPlugin } from './scripts/vite-sync-api-plugin'
+
+// Cloudflare Pages exposes the commit; local builds tag as 'dev'.
+const commitSha = process.env.CF_PAGES_COMMIT_SHA ?? 'dev'
+// Source maps upload only when the CI token is present (Cloudflare Pages env).
+const sentryUpload = Boolean(process.env.SENTRY_AUTH_TOKEN)
+
+export default defineConfig({
+  define: {
+    __COMMIT_SHA__: JSON.stringify(commitSha),
+    __BUILD_DATE__: JSON.stringify(new Date().toISOString()),
+  },
+  build: {
+    // Open-source app: ship public source maps for DevTools / PSI, and still
+    // upload the same maps to Sentry when the CI token is present.
+    sourcemap: true,
+    // Modern baselines only — matches Vite 7 defaults; keeps transforms lean.
+    target: ['chrome107', 'edge107', 'firefox104', 'safari16'],
+  },
+  esbuild: {
+    jsx: 'automatic',
+    jsxImportSource: 'remix/component',
+  },
+  plugins: [
+    syncApiPlugin(),
+    ...(sentryUpload
+      ? [
+          sentryVitePlugin({
+            org: 'kent-c-dodds-tech-llc',
+            project: 'kody-video',
+            release: { name: commitSha },
+            // Keep *.map in the Pages deploy so browsers can fetch them.
+            sourcemaps: { filesToDeleteAfterUpload: [] },
+          }),
+        ]
+      : []),
+    {
+      // First paint / LCP use inline critical CSS in index.html only. Strip
+      // any Vite-injected stylesheet links so lantern does not model a
+      // style-related LCP render delay; full CSS arrives via dynamic import()
+      // from main.tsx. Defer the module entry by two frames so the LCP image
+      // can paint before the main bundle evaluates.
+      name: 'lcp-first-paint',
+      transformIndexHtml(html) {
+        const withoutCssLinks = html
+          .replace(/<link rel="stylesheet"[^>]*>/g, '')
+          .replace(/<link[^>]*as="style"[^>]*>/g, '')
+          .replace(/<noscript><link rel="stylesheet"[^>]*><\/noscript>/g, '')
+        return withoutCssLinks.replace(
+          /<script type="module" crossorigin src="([^"]+)"><\/script>/,
+          // The entry import must self-heal. Two failure classes, both seen
+          // in production on 2026-08-05:
+          //  1. A client kept the previous shell (installed PWA resuming
+          //     across a deploy) and boots a retired hashed entry URL; the
+          //     SPA fallback answers it with HTML, so import() dies on the
+          //     MIME type and the app never mounts.
+          //  2. HTTP-cache poisoning: during a deploy's edge-propagation
+          //     window a hashed sub-chunk URL can answer with the SPA
+          //     fallback HTML; the browser caches that body under the .js
+          //     URL and 304 revalidation re-blesses it forever, so every
+          //     boot fails on the same poisoned import.
+          // Recovery: drop service workers + Cache Storage, then re-fetch
+          // the shell and its whole asset graph with cache:"reload" (which
+          // replaces poisoned HTTP-cache entries), and reload the page. A
+          // timestamp cooldown (not a one-shot flag) keeps deploy-window
+          // failures from hot-looping while still retrying a bit later.
+          // lazy-page.tsx applies the same idea to route chunks.
+          //
+          // Installed / standalone: boot on this turn (no two-rAF LCP
+          // delay) and never wipe the worker while offline — that is the
+          // iOS white splash that never dismisses.
+          `<script type="module">
+            const src = "$1";
+            const AT_KEY = "kody:boot-recover-at";
+            const COOLDOWN_MS = 45000;
+            const standalone =
+              window.matchMedia("(display-mode: standalone)").matches ||
+              navigator.standalone === true;
+            const boot = () => {
+              import(src).then(() => {
+                try { sessionStorage.removeItem(AT_KEY); } catch {}
+              }).catch(async () => {
+                try {
+                  const last = Number(sessionStorage.getItem(AT_KEY) ?? "0");
+                  if (Date.now() - last < COOLDOWN_MS) return;
+                } catch { return; }
+                if (navigator.onLine === false) return;
+                try {
+                  const probe = await Promise.race([
+                    fetch("/version.json", { cache: "no-store", headers: { accept: "application/json" } }),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error("probe")), 2500)),
+                  ]);
+                  if (!probe || !probe.ok) return;
+                } catch { return; }
+                // Stamp the cooldown only once we can actually recover.
+                // An airplane-mode miss must not burn the 45s window — the
+                // next online reload still needs to reprime retired hashes.
+                try { sessionStorage.setItem(AT_KEY, String(Date.now())); }
+                catch { return; }
+                try {
+                  const regs = await (navigator.serviceWorker?.getRegistrations?.() ?? []);
+                  await Promise.all(regs.map((reg) => reg.unregister()));
+                  const keys = await (self.caches?.keys?.() ?? []);
+                  await Promise.all(keys.map((key) => caches.delete(key)));
+                } catch {}
+                try {
+                  const seen = new Set();
+                  const queue = ["/", src];
+                  while (queue.length && seen.size < 40) {
+                    const url = queue.shift();
+                    if (seen.has(url)) continue;
+                    seen.add(url);
+                    try {
+                      const res = await fetch(url, { cache: "reload" });
+                      const type = res.headers.get("content-type") ?? "";
+                      if (/javascript|html/.test(type)) {
+                        const text = await res.text();
+                        for (const match of text.matchAll(/assets\\/[A-Za-z0-9_.-]+\\.(?:js|css|woff2)/g)) {
+                          queue.push("/" + match[0]);
+                        }
+                      }
+                    } catch {}
+                  }
+                } catch {}
+                location.reload();
+              });
+            };
+            if (standalone) boot();
+            else requestAnimationFrame(() => requestAnimationFrame(boot));
+          </script>`,
+        )
+      },
+    },
+    VitePWA({
+      // Prompt-based updates: users see "new version ready — update" instead
+      // of silently running stale code until some future reload.
+      registerType: 'prompt',
+      includeAssets: [
+        'favicon.png',
+        'apple-touch-icon.png',
+        'kody-mark.webp',
+        'art/*.webp',
+        'fonts/*.woff2',
+        'robots.txt',
+        'sitemap.xml',
+        'llms.txt',
+        'auth.md',
+      ],
+      manifest: {
+        name: 'Kody Video',
+        short_name: 'Kody Video',
+        description:
+          'Hold anywhere to record clips. Kody Video keeps projects private on your device until you share.',
+        theme_color: '#2F3E46',
+        background_color: '#2F3E46',
+        display: 'standalone',
+        // 'any': installed apps must rotate — an empty project's interface
+        // follows the device (that's how orientation is chosen), and home /
+        // static pages have deliberate landscape layouts. Locked projects
+        // pin themselves with screen.orientation.lock() (best effort).
+        orientation: 'any',
+        start_url: '/',
+        icons: [
+          {
+            src: 'pwa-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+          },
+          {
+            src: 'pwa-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+          },
+          {
+            src: 'pwa-512-maskable.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+        ],
+      },
+      workbox: {
+        // Without clientsClaim the updated worker activates after
+        // SKIP_WAITING but never takes over the open client —
+        // `controllerchange` never fires, the update button appears to do
+        // nothing, and the toast sticks until a full app restart.
+        clientsClaim: true,
+        // Navigations must come from the precache (navigateFallback), never
+        // from a network preload that holds the iOS splash until the edge
+        // answers. Updates still install in the background and toast.
+        navigationPreload: false,
+        // applyWaitingUpdate navigates with ?_sw= to bust iOS in-place
+        // document reuse; the precache lookup must ignore that mark.
+        ignoreURLParametersMatching: [/^utm_/, /^fbclid$/, /^_sw$/],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
+        // Not part of the app shell: the social card is for link scrapers
+        // and the icon master is only the source for generated icons.
+        // Source maps are served on demand for debugging — do not precache.
+        globIgnores: [
+          '**/og-image.png',
+          '**/art/kody-video-icon.png',
+          '**/*.map',
+          // Network-only: About / resume probes compare this to the running
+          // bundle SHA. Precaching it would make a stale shell look current.
+          '**/version.json',
+        ],
+        navigateFallback: '/index.html',
+        // Never SPA-fallback these: opening the social card in a tab with an
+        // active service worker was "redirecting" to the app, and the API
+        // must always hit the server.
+        navigateFallbackDenylist: [
+          /^\/api\//,
+          /\/og-image\.png$/,
+          /^\/robots\.txt$/,
+          /^\/sitemap\.xml$/,
+          /^\/llms\.txt$/,
+          /^\/auth\.md$/,
+          /^\/version\.json$/,
+          /^\/assets\//,
+          /\.map$/,
+        ],
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+      },
+      devOptions: {
+        enabled: false,
+      },
+    }),
+    {
+      // _redirects rewrites deep links to /app (see public/_redirects):
+      // Cloudflare Pages 308-normalizes rewrites that target /index.html,
+      // so the shell needs a second name. version.json is the network-only
+      // commit stamp About / resume probes compare to the running bundle.
+      // Written after the service worker generation so both stay out of the
+      // precache (navigateFallback keeps using /index.html).
+      name: 'spa-shell-copy',
+      closeBundle: async () => {
+        await copyFile('dist/index.html', 'dist/app.html')
+        await writeFile(
+          'dist/version.json',
+          `${JSON.stringify({ commit: commitSha, builtAt: new Date().toISOString() })}\n`,
+        )
+      },
+    },
+  ],
+})

@@ -1,0 +1,160 @@
+import { IconBack } from '../components/icons'
+
+/** Plain-language privacy policy for on-device Kody Video. */
+export function PrivacyPage() {
+  return () => (
+    <div className="screen about-screen">
+      <div className="about-top">
+        <a href="/" className="btn-icon" aria-label="Back to projects">
+          <IconBack />
+        </a>
+        <strong>Privacy</strong>
+        <span className="about-top-spacer" aria-hidden="true" />
+      </div>
+
+      <div className="about-body">
+        <h1>Privacy</h1>
+        <p className="legal-updated">Last updated: September 2026</p>
+
+        <section className="about-section">
+          <h2>Everything stays on your device</h2>
+          <p>
+            All recordings, projects, and edits live in this browser&rsquo;s on-device storage
+            (IndexedDB). Nothing is uploaded. There are no accounts, no cookies, and no cross-site
+            tracking.
+          </p>
+        </section>
+
+        <section className="about-section">
+          <h2>Anonymous page-view counts</h2>
+          <p>
+            The app counts page views with{' '}
+            <a href="https://usefathom.com" target="_blank" rel="noreferrer noopener">
+              Fathom Analytics
+            </a>
+            , a privacy-first service: no cookies, no personal identifiers, no cross-site
+            tracking, and nothing that requires a consent banner. We only ever see aggregate
+            numbers like &ldquo;how many people opened the app today&rdquo;.
+          </p>
+        </section>
+
+        <section className="about-section">
+          <h2>Anonymous crash reports</h2>
+          <p>
+            When the app itself breaks, an error report (the error message, a stack trace, browser
+            and OS names, and which step failed — e.g. &ldquo;export&rdquo;) is sent to Sentry so
+            bugs get found and fixed. Crash reports never contain your clips, audio, location, or
+            any account identifier, and no IP-based user profile is kept. Page-view counts, crash
+            reports, and (only if you tap Send to device) a short-lived matchmaking room are the
+            only data the app sends anywhere on its own.
+          </p>
+        </section>
+
+        <section className="about-section">
+          <h2>Recording health reports</h2>
+          <p>
+            To catch choppy recordings, each take keeps a small report on this device: frame
+            timings and counters read from the saved file (frame rate, missing frames, gaps),
+            how busy the app was while recording, encoder and save timings, and coarse device
+            facts (browser and OS names, CPU cores, memory size, battery level, camera
+            resolution). Reports never contain video, audio, location, or project names. They
+            stay on the device unless you share them yourself or tap Send on About → Recording
+            health, which sends that report to Sentry. Clear them there anytime.
+          </p>
+        </section>
+
+        <section className="about-section">
+          <h2>Send to another device</h2>
+          <p>
+            Kody Video Plus can send a project to another phone or computer that has the app open.
+            A Cloudflare matchmaker introduces the two browsers (a short code plus the WebRTC
+            connection description, which includes network addresses). Your clips never go to our
+            servers — they travel device-to-device, encrypted. Rooms expire in minutes and are not
+            stored as a library. If the devices cannot connect (different networks, strict Wi‑Fi),
+            use Save backup and import instead. Receiving a project is free and is the same as
+            importing a backup.
+          </p>
+        </section>
+
+        <section className="about-section">
+          <h2>Camera &amp; microphone</h2>
+          <p>
+            The camera and microphone are used only while the app is open, on the camera view.
+            On most devices the microphone is held only while you record; on iOS it stays with
+            the camera preview (a WebKit requirement for working audio). Backgrounding the app
+            releases both. Nothing is ever streamed anywhere.
+          </p>
+        </section>
+
+        <section className="about-section">
+          <h2>Optional location tagging</h2>
+          <p>
+            Location tagging is an optional Kody Video Plus feature and is off by default. You can
+            opt in with a button, which asks the browser for permission. When it&rsquo;s on, each
+            new clip stores device coordinates locally. Exported videos omit location by default;
+            Plus users can explicitly include it in MP4 metadata and chapter titles from the export
+            sheet. Leaving that export option off is treated as a public share: the file will not
+            include automatically captured coordinates, filming dates, or chapter-coordinate
+            metadata. You can turn location tagging off anytime; existing clips keep whatever they
+            already captured, and deleting a clip deletes its location data with it.
+          </p>
+        </section>
+
+        <section className="about-section">
+          <h2>Watermark removal purchase</h2>
+          <p>
+            The one-time watermark-removal purchase is processed by Stripe on Stripe&rsquo;s pages
+            — their privacy policy applies. The app&rsquo;s verification endpoint sees only the
+            checkout session id, never your media or location. Sharing Plus with another device
+            mints a short-lived restore code that maps to that same session id and expires in
+            minutes.
+          </p>
+        </section>
+
+        <section className="about-section">
+          <h2>Exports &amp; sharing</h2>
+          <p>
+            Exported or shared files leave the device only when you share or save them yourself.
+            MP4 exports always include the project title you chose, credit Kody Video (
+            <a href="https://kody.video">kody.video</a>), and note how many clips (and photos, and
+            whether there is music) made the film. The title is whatever you named the project — it
+            can identify a person, place, or event if you put that in the name. Automatically
+            captured coordinates, filming dates inside the MP4, and chapter coordinates stay out
+            of the file unless you turn on the Plus option to include clip locations. Share and
+            Save still stamp the file&rsquo;s last-modified time from the last clip so photo
+            libraries (including Synology Photos) can sort by when you filmed.
+          </p>
+        </section>
+
+        <section className="about-section">
+          <h2>Deleting your data</h2>
+          <p>
+            Delete projects in the app, or clear this site&rsquo;s browsing data / uninstall the
+            PWA. There is no server copy to delete.
+          </p>
+        </section>
+
+        <section className="about-section">
+          <h2>Questions</h2>
+          <p>
+            Email <a href="mailto:team@kody.video">team@kody.video</a> or open an issue at{' '}
+            <a
+              href="https://github.com/kentcdodds/kody-video"
+              target="_blank"
+              rel="noreferrer noopener"
+            >
+              github.com/kentcdodds/kody-video
+            </a>
+            .
+          </p>
+        </section>
+
+        <section className="about-section legal-nav">
+          <p>
+            See also the <a href="/terms">Terms</a> and <a href="/about">About</a> pages.
+          </p>
+        </section>
+      </div>
+    </div>
+  )
+}

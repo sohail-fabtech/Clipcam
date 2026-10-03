@@ -1,0 +1,251 @@
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { beginCaptureActivity, resetCaptureActivityForTests } from './capture-activity'
+import {
+  appendRecording,
+  hydrateProjectClips,
+  loadHomeProjects,
+  resetVerifiedDisplaySizesForTests,
+} from './project-actions'
+import { __resetDbForTests, addClip, createProject, deleteClip, getClip, getDb, getProject, listProjects, renameProject } from './storage'
+import { makeLabeledClipBlob } from './testing/make-test-clip'
+import { markWatermarkRemoved } from './entitlement'
+import { setPlatformOverridesForTests } from './platform'
+
+function fakeBlob(label: string): Blob {
+  return new Blob([label], { type: 'video/webm' })
+}
+
+describe('loadHomeProjects', () => {
+  beforeEach(async () => {
+    await __resetDbForTests()
+  })
+
+  it('silently deletes projects left in their default state', async () => {
+    await markWatermarkRemoved('cs_test_actions')
+    const kept = await createProject('Ski trip')
+    const pristine = await createProject()
+    const emptied = await createProject()
+    const clip = await addClip({
+      projectId: emptied.id,
+      blob: fakeBlob('take'),
+      mimeType: 'video/webm',
+      durationMs: 700,
+    })
+    await deleteClip(clip.id)
+
+    const { projects: summaries } = await loadHomeProjects()
+
+    expect(summaries.map((project) => project.id)).toEqual([kept.id])
+    expect((await listProjects()).map((project) => project.id)).toEqual([kept.id])
+    expect(pristine.name).toBe('Project 2')
+  })
+
+  it('reports each project’s on-device size', async () => {
+    await markWatermarkRemoved('cs_test_sizes')
+    const small = await createProject('Small')
+    const big = await createProject('Big')
+    await addClip({ projectId: small.id, blob: fakeBlob('ab'), mimeType: 'video/webm', durationMs: 700 })
+    await addClip({ projectId: big.id, blob: fakeBlob('abcdef'), mimeType: 'video/webm', durationMs: 700 })
+    await addClip({ projectId: big.id, blob: fakeBlob('ghij'), mimeType: 'video/webm', durationMs: 700 })
+
+    const { projects, orphanBytes } = await loadHomeProjects()
+
+    expect(Object.fromEntries(projects.map((p) => [p.name, p.sizeBytes]))).toEqual({
+      Small: 2,
+      Big: 10,
+    })
+    expect(orphanBytes).toBe(0)
+  })
+
+  it('puts clips that fell out of a project’s list back before the empty-project sweep', async () => {
+    const project = await createProject()
+    const clip = await addClip({ projectId: project.id, blob: fakeBlob('x'), mimeType: 'video/webm', durationMs: 700 })
+    const stored = await getProject(project.id)
+    const db = await getDb()
+    await db.put('projects', { ...stored!, clipIds: [] })
+
+    const { projects } = await loadHomeProjects()
+
+    expect(projects.map((p) => p.id)).toEqual([project.id])
+    expect((await getProject(project.id))?.clipIds).toEqual([clip.id])
+  })
+
+  it('keeps empty projects the user renamed', async () => {
+    const project = await createProject()
+    // Even a rename to a default-shaped name is deliberate.
+    await renameProject(project.id, 'Project 2')
+
+    const { projects: summaries } = await loadHomeProjects()
+
+    expect(summaries.map((entry) => entry.id)).toEqual([project.id])
+    expect(summaries[0]?.clipCount).toBe(0)
+  })
+})
+
+describe('appendRecording orientation lock', () => {
+  beforeEach(async () => {
+    await __resetDbForTests()
+  })
+
+  afterEach(() => {
+    setPlatformOverridesForTests({})
+  })
+
+  const record = (projectId: string, label: string) =>
+    appendRecording(projectId, {
+      blob: fakeBlob(label),
+      mimeType: 'video/webm',
+      durationMs: 900,
+    })
+
+  it('locks landscape from the first take on a sideways-held touch device', async () => {
+    await markWatermarkRemoved('cs_test_actions')
+    setPlatformOverridesForTests({ coarsePointer: true, viewportLandscape: true })
+    const project = await createProject('Wide')
+
+    await record(project.id, 'first')
+    expect((await getProject(project.id))?.orientation).toBe('landscape')
+
+    // Later takes never re-decide.
+    setPlatformOverridesForTests({ coarsePointer: true, viewportLandscape: false })
+    await record(project.id, 'second')
+    expect((await getProject(project.id))?.orientation).toBe('landscape')
+  })
+
+  it('locks portrait (clearing any stale lock) from an upright first take', async () => {
+    await markWatermarkRemoved('cs_test_actions')
+    setPlatformOverridesForTests({ coarsePointer: true, viewportLandscape: true })
+    const project = await createProject('Tall')
+    const first = await record(project.id, 'wide-take')
+    await deleteClip(first.id)
+    // Deleting the last clip deliberately KEEPS the stored lock: clearing it
+    // here would lose the orientation across a delete → undo cycle. An empty
+    // project is unlocked because the UI derives that from clip count, and
+    // the next first take overwrites the stale value (asserted below).
+    expect((await getProject(project.id))?.orientation).toBe('landscape')
+
+    // Emptied project: the next first take re-decides — now held upright.
+    setPlatformOverridesForTests({ coarsePointer: true, viewportLandscape: false })
+    await record(project.id, 'upright-take')
+    expect((await getProject(project.id))?.orientation).toBeUndefined()
+  })
+
+  it('never locks on fine-pointer (desktop) devices without clip size', async () => {
+    setPlatformOverridesForTests({ coarsePointer: false, viewportLandscape: true })
+    const project = await createProject('Desk')
+
+    await record(project.id, 'webcam')
+    expect((await getProject(project.id))?.orientation).toBeUndefined()
+  })
+
+  it('locks desktop from the first clip\'s pixels when size is known', async () => {
+    await markWatermarkRemoved('cs_test_actions')
+    setPlatformOverridesForTests({ coarsePointer: false, viewportLandscape: false })
+    const project = await createProject('Desk wide')
+
+    await appendRecording(project.id, {
+      blob: fakeBlob('webcam'),
+      mimeType: 'video/webm',
+      durationMs: 900,
+      width: 1920,
+      height: 1080,
+    })
+    expect((await getProject(project.id))?.orientation).toBe('landscape')
+  })
+
+  it('saves the take even when the landscape lock is entitlement-gated', async () => {
+    // Free plan: recording is allowed sideways; the take lands and the
+    // project stays portrait when the landscape lock is Plus-gated.
+    setPlatformOverridesForTests({ coarsePointer: true, viewportLandscape: true })
+    const project = await createProject('Free wide')
+
+    const clip = await record(project.id, 'take')
+    expect(clip.id).toBeTruthy()
+    const stored = await getProject(project.id)
+    expect(stored?.clipIds).toHaveLength(1)
+    expect(stored?.orientation).toBeUndefined()
+  })
+
+  it('swaps a lying camera-track size to the hold when the file cannot be probed', async () => {
+    setPlatformOverridesForTests({ coarsePointer: true, viewportLandscape: true })
+    const project = await createProject('Held wide')
+    const clip = await appendRecording(project.id, {
+      blob: fakeBlob('sideways'),
+      mimeType: 'video/webm',
+      durationMs: 900,
+      width: 1080,
+      height: 1920,
+    })
+    expect(clip.width).toBe(1920)
+    expect(clip.height).toBe(1080)
+    expect((await getClip(clip.id))?.width).toBe(1920)
+    expect((await getClip(clip.id))?.height).toBe(1080)
+  })
+
+  it('stores the encoded display size instead of the camera-track fallback', async () => {
+    const project = await createProject('Track lie')
+    const blob = await makeLabeledClipBlob(640, 360)
+    const clip = await appendRecording(project.id, {
+      blob,
+      mimeType: 'video/webm',
+      durationMs: 1200,
+      width: 360,
+      height: 640,
+    })
+    expect(clip.width).toBe(640)
+    expect(clip.height).toBe(360)
+    expect((await getClip(clip.id))?.width).toBe(640)
+    expect((await getClip(clip.id))?.height).toBe(360)
+  })
+})
+
+describe('hydrateProjectClips display size', () => {
+  beforeEach(async () => {
+    await __resetDbForTests()
+    resetVerifiedDisplaySizesForTests()
+    resetCaptureActivityForTests()
+  })
+
+  it('waits while a take is recording, then finishes', async () => {
+    const project = await createProject('Busy')
+    const clip = await addClip({
+      projectId: project.id,
+      blob: await makeLabeledClipBlob(640, 360),
+      mimeType: 'video/webm',
+      durationMs: 1200,
+      width: 360,
+      height: 640,
+    })
+    const release = beginCaptureActivity()
+    const hydrating = hydrateProjectClips([clip]).then((result) => result)
+    const first = await Promise.race([
+      hydrating.then(() => 'hydrated'),
+      new Promise((resolve) => setTimeout(() => resolve('waiting'), 400)),
+    ])
+    expect(first).toBe('waiting')
+    // Nothing was written behind the live take either.
+    expect((await getClip(clip.id))?.width).toBe(360)
+    release()
+    const [hydrated] = await hydrating
+    expect(hydrated.width).toBe(640)
+  })
+
+  it('corrects a stored size that disagrees with the file', async () => {
+    const project = await createProject('Backfill')
+    const blob = await makeLabeledClipBlob(640, 360)
+    const clip = await addClip({
+      projectId: project.id,
+      blob,
+      mimeType: 'video/webm',
+      durationMs: 1200,
+      width: 360,
+      height: 640,
+    })
+
+    const [hydrated] = await hydrateProjectClips([clip])
+    expect(hydrated.width).toBe(640)
+    expect(hydrated.height).toBe(360)
+    expect((await getClip(clip.id))?.width).toBe(640)
+    expect((await getClip(clip.id))?.height).toBe(360)
+  })
+})

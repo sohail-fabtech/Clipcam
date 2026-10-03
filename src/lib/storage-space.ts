@@ -1,0 +1,120 @@
+/** Device storage awareness: clips are big, quotas are finite. */
+
+export interface StorageSpace {
+  usedBytes: number
+  quotaBytes: number
+  /** 0..1 share of the quota already used. */
+  ratio: number
+}
+
+export type StorageSeverity = 'ok' | 'warning' | 'critical'
+
+export async function estimateStorageSpace(): Promise<StorageSpace | null> {
+  try {
+    if (!navigator.storage?.estimate) return null
+    const { usage, quota } = await navigator.storage.estimate()
+    if (!quota || quota <= 0) return null
+    const usedBytes = usage ?? 0
+    return { usedBytes, quotaBytes: quota, ratio: Math.min(1, usedBytes / quota) }
+  } catch {
+    return null
+  }
+}
+
+export function storageSeverity(ratio: number): StorageSeverity {
+  if (ratio >= 0.92) return 'critical'
+  if (ratio >= 0.8) return 'warning'
+  return 'ok'
+}
+
+export function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 MB'
+  const gb = bytes / (1024 * 1024 * 1024)
+  if (gb >= 1) {
+    return `${gb >= 10 ? Math.round(gb) : Math.round(gb * 10) / 10} GB`
+  }
+  const mb = bytes / (1024 * 1024)
+  return `${Math.max(1, Math.round(mb))} MB`
+}
+
+/** Bytes the origin can still write (0 when the estimate is missing). */
+export function availableBytes(space: StorageSpace | null | undefined): number {
+  if (!space) return 0
+  return Math.max(0, space.quotaBytes - space.usedBytes)
+}
+
+/**
+ * Headroom for IndexedDB overhead and generated thumbs so a backup that
+ * *just* fits the remaining quota does not fail midway.
+ */
+export const IMPORT_SLACK_BYTES = 32 * 1024 * 1024
+
+/** Bytes an import of this backup should leave free (file + thumbs slack). */
+export function importNeedBytes(backupBytes: number): number {
+  if (!Number.isFinite(backupBytes) || backupBytes <= 0) return IMPORT_SLACK_BYTES
+  return backupBytes + IMPORT_SLACK_BYTES
+}
+
+/** True when a backup of `backupBytes` should fit in the remaining quota. */
+export function backupFitsStorage(
+  backupBytes: number,
+  space: StorageSpace | null | undefined,
+): boolean {
+  if (!space) return true
+  if (!Number.isFinite(backupBytes) || backupBytes <= 0) return true
+  return availableBytes(space) >= importNeedBytes(backupBytes)
+}
+
+/** User-facing copy when a backup does not fit the remaining quota. */
+export function backupTooLargeMessage(
+  backupBytes: number,
+  space: StorageSpace | null | undefined,
+): string {
+  const free = availableBytes(space)
+  return `This backup is ${formatBytes(backupBytes)} and this device has ${formatBytes(free)} free (imports need about ${formatBytes(importNeedBytes(backupBytes))}). Delete a project or clear cached exports, then try again.`
+}
+
+export interface StorageBreakdown {
+  projectsBytes: number
+  exportCacheBytes: number
+  orphanBytes: number
+  /** Browser-reported usage none of the above explains: the app's own
+   * files, database bookkeeping, and superseded media the browser has not
+   * released yet (it frees those once nothing in the app still holds them —
+   * reliably after the app fully closes). */
+  otherBytes: number
+}
+
+export function storageBreakdown(
+  space: StorageSpace,
+  parts: { projectsBytes: number; exportCacheBytes: number; orphanBytes: number },
+): StorageBreakdown {
+  const accounted = parts.projectsBytes + parts.exportCacheBytes + parts.orphanBytes
+  return { ...parts, otherBytes: Math.max(0, space.usedBytes - accounted) }
+}
+
+/** Below this, "other" is ordinary app/database overhead — not worth a word. */
+export const NOTABLE_OTHER_BYTES = 64 * 1024 * 1024
+
+export function isOtherStorageNotable(breakdown: StorageBreakdown, space: StorageSpace): boolean {
+  return (
+    breakdown.otherBytes >= NOTABLE_OTHER_BYTES && breakdown.otherBytes >= space.usedBytes * 0.1
+  )
+}
+
+export function formatStoragePercent(ratio: number): string {
+  return `${Math.round(ratio * 100)}%`
+}
+
+/**
+ * Ask the browser to mark this origin's storage persistent so recordings
+ * can't be silently evicted under storage pressure. Chromium grants it
+ * without any prompt for engaged/installed origins; fire-and-forget.
+ */
+export async function requestPersistentStorage(): Promise<void> {
+  try {
+    await navigator.storage?.persist?.()
+  } catch {
+    // Older browsers: nothing to do.
+  }
+}

@@ -1,0 +1,725 @@
+import { clipCanvasFit } from '../clip-fit'
+import { pickRecorderMimeType } from '../media'
+import { isIosBrowser } from '../platform'
+import { videoBitrateFor } from '../video-quality'
+import {
+  clipMusicVolume,
+  clipSoundVolume,
+  isImageClip,
+  resolveAudioTrackPlayback,
+  type ProjectOrientation,
+} from '../types'
+import {
+  FADE_IN_MS,
+  FADE_OUT_MS,
+  channelPeak,
+  filmEdgeFades,
+  normalizationScale,
+  type BackgroundAudio,
+} from './background-audio'
+import { clampSegmentToMedia, type ExportPlan } from './plan'
+import {
+  PREVIEW_EVERY_N_FRAMES,
+  blitPreview,
+  decodeBackgroundAudio,
+  decodeClipAudio,
+  drawFitFrom,
+  drawWatermark,
+  loadClipImage,
+  loadClipVideo,
+  noteEncodeCanvasKind,
+  pickOutputSize,
+  recordVideoLumaSample,
+  resolveEncodeCanvas,
+  playExportVideo,
+  seekTo,
+  tagExportError,
+  wait,
+  type ExportResult,
+} from './shared'
+import { ExportCancelledError, throwIfExportAborted } from './cancelled'
+
+export interface RealtimeExportOptions {
+  /**
+   * AudioContext created/resumed from the user's tap so Android allows audio
+   * mixing. The export closes it when finished.
+   */
+  audioContext?: AudioContext
+  onProgress?: (ratio: number) => void
+  /** Visible canvas to mirror sampled frames onto while exporting. */
+  getPreviewCanvas?: () => HTMLCanvasElement | null
+  /** Mark stamped onto each frame; null when the user purchased removal. */
+  watermarkImage?: HTMLImageElement | null
+  /** Background-music playlist mixed under the clips (per-clip volumes). */
+  background?: BackgroundAudio | null
+  /** Force the output into the project's orientation (absent = follow the
+   * first clip). */
+  orientation?: ProjectOrientation
+  /** Stop the stitcher as soon as the user cancels (Stop or a pref change). */
+  signal?: AbortSignal
+}
+
+/**
+ * Fallback stitcher for browsers without WebCodecs: plays each clip into a
+ * canvas captured by MediaRecorder, mixing audio via Web Audio. Realtime and
+ * best-effort — the WebCodecs engine is preferred whenever available.
+ */
+export async function exportRealtime(
+  plan: ExportPlan,
+  options: RealtimeExportOptions = {},
+): Promise<ExportResult> {
+  const probeClip = plan.segments[0].clip
+  let width: number
+  let height: number
+  try {
+    if (isImageClip(probeClip)) {
+      const bitmap = await loadClipImage(probeClip.blob)
+      ;({ width, height } = pickOutputSize(bitmap.width, bitmap.height, options.orientation))
+      bitmap.close()
+    } else {
+      const probe = await loadClipVideo(probeClip.blob, 8000, probeClip.mimeType)
+      ;({ width, height } = pickOutputSize(
+        probe.video.videoWidth,
+        probe.video.videoHeight,
+        options.orientation,
+      ))
+      probe.release()
+    }
+  } catch (error) {
+    // Probing is not worth dying over: recorded clips carry their capture
+    // dimensions, and pickOutputSize has sane defaults for the rest.
+    if ((probeClip.width ?? 0) > 0 && (probeClip.height ?? 0) > 0) {
+      ;({ width, height } = pickOutputSize(
+        probeClip.width!,
+        probeClip.height!,
+        options.orientation,
+      ))
+    } else {
+      throw tagExportError(error, { engine: 'realtime', where: 'probe-size', clipIndex: 0 })
+    }
+  }
+
+  // Encode from an on-DOM canvas whenever possible: iOS Safari's
+  // canvas.captureStream() delivers BLACK frames for canvases that aren't
+  // attached to the document (KODY-VIDEO-Q). Prefer the overlay preview; if
+  // it isn't mounted in time on iOS, attach a tiny host rather than a
+  // detached element. Chromium is fine with a detached fallback.
+  const ios = isIosBrowser()
+  const encodeCanvas = await resolveEncodeCanvas({
+    getPreviewCanvas: options.getPreviewCanvas,
+    preferPreview: true,
+    requireAttached: ios,
+  })
+  noteEncodeCanvasKind(encodeCanvas.kind)
+  const { canvas, encodingIntoPreview } = encodeCanvas
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext('2d', { alpha: false })
+  if (!ctx) {
+    encodeCanvas.release()
+    throw new Error('Canvas not available')
+  }
+  ctx.fillStyle = '#000'
+  ctx.fillRect(0, 0, width, height)
+
+  try {
+  const canvasStream = canvas.captureStream(30)
+  if (canvasStream.getVideoTracks().length === 0) {
+    throw new Error('This browser cannot capture canvas video for export')
+  }
+
+  let audioContext: AudioContext | null = options.audioContext ?? null
+  let dest: MediaStreamAudioDestinationNode | null = null
+  try {
+    if (!audioContext) audioContext = new AudioContext()
+    if (audioContext.state === 'suspended') {
+      await audioContext.resume().catch(() => undefined)
+    }
+    dest = audioContext.createMediaStreamDestination()
+  } catch {
+    audioContext = null
+    dest = null
+  }
+
+  // Clip audio flows through one gain node that glides toward each clip's
+  // own sound volume as the export reaches it — this engine paints in
+  // realtime, so Web Audio's own ramping does the work. Every clip is
+  // peak-normalized on the way in (per-segment gain), music or not.
+  /** Gain the clips' own audio plays through (each clip's sound volume). */
+  let clipMixGain: GainNode | null = null
+  if (audioContext && dest) {
+    try {
+      const clipGain = audioContext.createGain()
+      clipGain.gain.value = 1
+      clipGain.connect(dest)
+      clipMixGain = clipGain
+    } catch {
+      clipMixGain = null
+    }
+  }
+
+  // Background music rides sequentially chained buffer sources behind a
+  // gain node: each track starts when the previous one ends (nothing
+  // loops), and the gain glides toward each clip's music volume as the
+  // export reaches it. Tracks are peak-normalized and carry their own
+  // volume via a per-source gain.
+  let backgroundGain: GainNode | null = null
+  /** Set once the playlist has truly run out — later segments must stop
+   * scheduling music moves (the film's remainder is music-free). */
+  const playlistState = { done: false }
+  let startBackground: (() => void) | null = null
+  let stopBackground: (() => void) | null = null
+  const backgroundTracks = options.background?.tracks ?? []
+  /** Film-edge fades come from the tracks at the film's edges. */
+  const backgroundEdgeFades = options.background
+    ? filmEdgeFades(options.background, plan.totalMs)
+    : null
+  if (backgroundTracks.length > 0 && audioContext && dest) {
+    try {
+      const gain = audioContext.createGain()
+      gain.gain.value = 0
+      gain.connect(dest)
+      let stopped = false
+      /** Output position where the next track starts (the kept windows
+       * played so far) — the realtime mirror of the mixer's
+       * trackStartFrame, used to gate interior fades the same way. */
+      let playlistPositionMs = 0
+      let activeSource: AudioBufferSourceNode | null = null
+      const playFrom = async (index: number): Promise<void> => {
+        if (stopped || !audioContext) return
+        if (index >= backgroundTracks.length) {
+          // Playlist over mid-film: the rest of the film is music-free
+          // (the clip sound rides its own gain, unaffected).
+          playlistState.done = true
+          return
+        }
+        // Undecodable tracks are skipped; the next one starts in their place.
+        const buffer = await decodeBackgroundAudio(backgroundTracks[index].blob)
+        if (stopped) return
+        if (!buffer) return playFrom(index + 1)
+        // Only the kept (trimmed) window plays, at the track's own volume.
+        const playback = resolveAudioTrackPlayback(backgroundTracks[index], options.background!)
+        const trimStartSec = Math.min(playback.trimStartMs / 1000, buffer.duration)
+        const trimEndSec = Math.min(playback.trimEndMs / 1000, buffer.duration)
+        const keptSec = Math.max(0, trimEndSec - trimStartSec)
+        if (keptSec < 0.05) return playFrom(index + 1)
+        const source = audioContext.createBufferSource()
+        source.buffer = buffer
+        // Peak-normalize the track so the volume dials mean the same thing
+        // regardless of how hot the file is mastered (whole-file peak, so
+        // loudness doesn't change with where the track is trimmed), then
+        // apply the track's own volume on top.
+        const channels = Array.from({ length: buffer.numberOfChannels }, (_, ch) =>
+          buffer.getChannelData(ch),
+        )
+        const trackGain = normalizationScale(channelPeak(channels)) * playback.volume
+        const normalize = audioContext.createGain()
+        normalize.gain.value = trackGain
+        const now = audioContext.currentTime
+        const trackStartMs = playlistPositionMs
+        playlistPositionMs += keptSec * 1000
+        // Interior fades only, matching the WebCodecs mixer: the
+        // film-start fade rides the master gain glide below, so a track
+        // fade-in applies only mid-film — and a track the film cuts off
+        // fades via the scheduled film-end fade instead of its own.
+        if (playback.fadeIn && trackStartMs > 0) {
+          const fadeSec = Math.min(FADE_IN_MS / 1000, keptSec / 2)
+          normalize.gain.setValueAtTime(0, now)
+          normalize.gain.linearRampToValueAtTime(trackGain, now + fadeSec)
+        }
+        if (playback.fadeOut && playlistPositionMs < plan.totalMs) {
+          const fadeSec = Math.min(FADE_OUT_MS / 1000, keptSec / 2)
+          normalize.gain.setValueAtTime(trackGain, now + keptSec - fadeSec)
+          normalize.gain.linearRampToValueAtTime(0, now + keptSec)
+        }
+        source.connect(normalize)
+        normalize.connect(gain)
+        source.onended = () => {
+          void playFrom(index + 1)
+        }
+        activeSource = source
+        source.start(now, trimStartSec, keptSec)
+      }
+      // Deferred to the first painted segment: starting here would let the
+      // music advance through clip preload before any frame is recorded.
+      startBackground = () => {
+        startBackground = null
+        void playFrom(0)
+      }
+      stopBackground = () => {
+        stopped = true
+        try {
+          activeSource?.stop()
+        } catch {
+          // already stopped
+        }
+      }
+      backgroundGain = gain
+    } catch {
+      backgroundGain = null
+      startBackground = null
+      stopBackground = null
+    }
+  }
+
+  const mixedStream = new MediaStream([
+    ...canvasStream.getVideoTracks(),
+    ...(dest?.stream.getAudioTracks() ?? []),
+  ])
+
+  const mimeType = pickRecorderMimeType()
+  let recorder: MediaRecorder
+  try {
+    recorder = mimeType
+      ? new MediaRecorder(mixedStream, {
+          mimeType,
+          videoBitsPerSecond: videoBitrateFor(width, height),
+        })
+      : new MediaRecorder(mixedStream)
+  } catch {
+    recorder = new MediaRecorder(mixedStream)
+  }
+
+  const chunks: BlobPart[] = []
+  recorder.ondataavailable = (event) => {
+    if (event.data.size > 0) chunks.push(event.data)
+  }
+  const stopped = new Promise<Blob>((resolve, reject) => {
+    recorder.onstop = () => resolve(new Blob(chunks, { type: recorder.mimeType || 'video/webm' }))
+    recorder.onerror = () => reject(new Error('Export recording failed'))
+  })
+
+  recorder.start(200)
+  await wait(120)
+
+  let paintedTotalMs = 0
+  const frameCounter = { count: 0 }
+  try {
+    for (const [segmentIndex, segment] of plan.segments.entries()) {
+      throwIfExportAborted(options.signal)
+      const isImage = isImageClip(segment.clip)
+      let loaded: Awaited<ReturnType<typeof loadClipVideo>> | null = null
+      if (!isImage) {
+        try {
+          loaded = await loadClipVideo(segment.clip.blob, 8000, segment.clip.mimeType)
+        } catch (error) {
+          // The realtime engine plays clips through elements — this clip is
+          // genuinely unopenable here. Tag which one for the error report.
+          throw tagExportError(error, {
+            engine: 'realtime',
+            where: 'segment-load',
+            clipIndex: segmentIndex,
+          })
+        }
+      }
+      try {
+        // A photo has no media length to clamp against — its chosen
+        // duration is exact by definition.
+        const clamped = loaded
+          ? clampSegmentToMedia(segment, loaded.mediaDurationMs)
+          : { startMs: segment.startMs, endMs: segment.endMs }
+        if (!clamped) continue
+        if (audioContext) {
+          const now = audioContext.currentTime
+          // The clip's own sound glides toward this clip's volume (a step
+          // at the very first segment — nothing is sounding before it).
+          // Each bus is guarded on its own — a failed clip gain node must
+          // not leave the music bus unscheduled (parked at 0) too.
+          if (clipMixGain) {
+            const clipLevel = clipSoundVolume(segment.clip)
+            if (segmentIndex === 0) {
+              clipMixGain.gain.setValueAtTime(clipLevel, now)
+            } else {
+              clipMixGain.gain.setTargetAtTime(clipLevel, now, 0.2)
+            }
+          }
+          if (backgroundGain && options.background) {
+            startBackground?.()
+            // A finished playlist means the rest of the film is music-free —
+            // re-scheduling a music level would move a silent bus for nothing.
+            const musicLevel = playlistState.done ? 0 : clipMusicVolume(segment.clip)
+            if (segmentIndex === 0 && !backgroundEdgeFades?.fadeIn) {
+              // No fade-in: the music opens at the clip's level directly.
+              backgroundGain.gain.setValueAtTime(musicLevel, now)
+            } else {
+              backgroundGain.gain.setTargetAtTime(musicLevel, now, 0.2)
+            }
+            // This engine paints in realtime, so the last segment's end
+            // lands roughly `segment length` from now — schedule the
+            // musical fade-out to finish there, shrinking it on short
+            // final clips (like the WebCodecs envelope) instead of
+            // dropping it.
+            const isLast = segmentIndex === plan.segments.length - 1
+            const segmentSec = (clamped.endMs - clamped.startMs) / 1000
+            if (isLast && backgroundEdgeFades?.fadeOut) {
+              const fadeSec = Math.min(1.2, segmentSec / 2)
+              if (fadeSec > 0.05) {
+                backgroundGain.gain.setTargetAtTime(0, now + segmentSec - fadeSec, fadeSec / 3)
+              }
+            }
+          }
+        }
+        const paintShared = {
+          startSec: clamped.startMs / 1000,
+          endSec: clamped.endMs / 1000,
+          canvas,
+          ctx,
+          frameCounter,
+          // No mirroring needed when the encode canvas is the preview.
+          getPreviewCanvas: encodingIntoPreview ? undefined : options.getPreviewCanvas,
+          watermarkImage: options.watermarkImage ?? null,
+          signal: options.signal,
+          fit: clipCanvasFit(segment.clip),
+          onElapsedMs: (elapsed: number) => {
+            if (plan.totalMs > 0) {
+              options.onProgress?.(Math.min(1, (paintedTotalMs + elapsed) / plan.totalMs))
+            }
+          },
+        }
+        const paintedMs = loaded
+          ? await paintSegment({
+              video: loaded.video,
+              blob: segment.clip.blob,
+              audioContext,
+              // Clip audio joins the graph through the clip-volume gain and
+              // gets peak-normalized on the way in (music or not).
+              clipDestination: clipMixGain ?? dest,
+              normalizeClip: clipMixGain !== null,
+              ...paintShared,
+            })
+          : await paintImageSegment({ blob: segment.clip.blob, ...paintShared }).catch(
+              (error) => {
+                throw tagExportError(error, {
+                  engine: 'realtime',
+                  where: 'image-paint',
+                  clipIndex: segmentIndex,
+                })
+              },
+            )
+        paintedTotalMs += paintedMs
+        options.onProgress?.(plan.totalMs > 0 ? Math.min(1, paintedTotalMs / plan.totalMs) : 1)
+      } finally {
+        loaded?.release()
+      }
+    }
+
+    if (paintedTotalMs <= 0) {
+      throw new Error('No video frames could be exported')
+    }
+
+    // End-of-film safety ramp: with Fade out on it just finishes what the
+    // scheduled fade started; with it off, a click-kill too short to hear
+    // as a fade (mirrors the WebCodecs edge ramp). The clip side keeps its
+    // own level — the sides are independent now.
+    if (backgroundGain && audioContext) {
+      const tau = backgroundEdgeFades?.fadeOut ? 0.06 : 0.008
+      backgroundGain.gain.setTargetAtTime(0, audioContext.currentTime, tau)
+    }
+    // Hold the last frame briefly so the final GOP isn't truncated.
+    await wait(180)
+    options.onProgress?.(1)
+  } finally {
+    stopBackground?.()
+    if (recorder.state !== 'inactive') recorder.stop()
+    canvasStream.getTracks().forEach((t) => t.stop())
+    if (audioContext) {
+      await audioContext.close().catch(() => undefined)
+    }
+  }
+
+  throwIfExportAborted(options.signal)
+  const blob = await stopped
+  if (blob.size < 8_000) {
+    throw new Error('Export produced an unusable file')
+  }
+  const isMp4 = (recorder.mimeType || '').includes('mp4')
+  return {
+    blob,
+    mimeType: blob.type || 'video/webm',
+    fileExtension: isMp4 ? 'mp4' : 'webm',
+    locationIncluded: false,
+    engine: 'realtime',
+  }
+  } finally {
+    encodeCanvas.release()
+  }
+}
+
+interface PaintSharedArgs {
+  startSec: number
+  endSec: number
+  canvas: HTMLCanvasElement
+  ctx: CanvasRenderingContext2D
+  frameCounter: { count: number }
+  getPreviewCanvas?: () => HTMLCanvasElement | null
+  watermarkImage: HTMLImageElement | null
+  signal?: AbortSignal
+  fit: 'cover' | 'contain'
+  onElapsedMs: (elapsedMs: number) => void
+}
+
+interface PaintSegmentArgs extends PaintSharedArgs {
+  video: HTMLVideoElement
+  blob: Blob
+  audioContext: AudioContext | null
+  /** Where the clip's own audio joins the recording graph (the clip-volume
+   * gain when the graph exists, else the mux destination). */
+  clipDestination: AudioNode | null
+  /** Peak-normalize the clip audio (on whenever the graph exists). */
+  normalizeClip: boolean
+}
+
+interface PaintImageSegmentArgs extends PaintSharedArgs {
+  blob: Blob
+}
+
+/**
+ * Photo painter: this engine records a LIVE canvas capture, so the still is
+ * repainted every animation frame for its wall-clock duration (a static
+ * canvas would starve MediaRecorder of frames on some platforms). Photos
+ * contribute no audio — the music bed, when present, keeps playing on its
+ * own scheduled sources.
+ *
+ * @returns painted duration in ms (0 when the segment had nothing to show)
+ */
+async function paintImageSegment({
+  blob,
+  startSec,
+  endSec,
+  canvas,
+  ctx,
+  frameCounter,
+  getPreviewCanvas,
+  watermarkImage,
+  signal,
+  fit,
+  onElapsedMs,
+}: PaintImageSegmentArgs): Promise<number> {
+  const segmentSec = endSec - startSec
+  if (segmentSec <= 0.04) return 0
+
+  const bitmap = await loadClipImage(blob)
+  try {
+    const paintFrame = () => {
+      drawFitFrom(ctx, bitmap, bitmap.width, bitmap.height, canvas.width, canvas.height, fit)
+      if (watermarkImage) {
+        drawWatermark(ctx, watermarkImage, canvas.width, canvas.height)
+      }
+    }
+    paintFrame()
+    const startedAt = performance.now()
+    await new Promise<void>((resolve, reject) => {
+      let raf = 0
+      const draw = () => {
+        if (signal?.aborted) {
+          cancelAnimationFrame(raf)
+          reject(new ExportCancelledError())
+          return
+        }
+        const elapsedSec = (performance.now() - startedAt) / 1000
+        paintFrame()
+        if (elapsedSec >= segmentSec - 0.03) {
+          cancelAnimationFrame(raf)
+          resolve()
+          return
+        }
+        if (frameCounter.count % PREVIEW_EVERY_N_FRAMES === 0) {
+          blitPreview(canvas, getPreviewCanvas?.())
+        }
+        if (frameCounter.count % 30 === 0) {
+          recordVideoLumaSample(canvas)
+        }
+        frameCounter.count += 1
+        onElapsedMs(Math.min(segmentSec, elapsedSec) * 1000)
+        raf = requestAnimationFrame(draw)
+      }
+      raf = requestAnimationFrame(draw)
+    })
+    return Math.round(segmentSec * 1000)
+  } finally {
+    bitmap.close()
+  }
+}
+
+/** @returns painted duration in ms (0 when the segment had nothing to show) */
+async function paintSegment({
+  video,
+  blob,
+  startSec,
+  endSec,
+  canvas,
+  ctx,
+  audioContext,
+  clipDestination,
+  normalizeClip,
+  frameCounter,
+  getPreviewCanvas,
+  watermarkImage,
+  signal,
+  fit,
+  onElapsedMs,
+}: PaintSegmentArgs): Promise<number> {
+  const segmentSec = endSec - startSec
+  if (segmentSec <= 0.04) return 0
+
+  await seekTo(video, startSec)
+
+  let bufferSource: AudioBufferSourceNode | null = null
+  let normalizeGain: GainNode | null = null
+  const audioBuffer = audioContext && clipDestination ? await decodeClipAudio(blob) : null
+
+  try {
+    // iOS Safari (esp. installed PWA + Low Power Mode) can reject muted
+    // play() once the export tap's user-activation has expired across the
+    // awaits before we get here (KODY-VIDEO-W). Scrub via currentTime so
+    // the MediaRecorder canvas path still paints wall-clock frames.
+    const playback = await playExportVideo(video)
+    if (playback === 'playing') {
+      await waitForPlaybackStart(video, startSec)
+    }
+
+    const paintFrame = () => {
+      drawFitFrom(
+        ctx,
+        video,
+        video.videoWidth || canvas.width,
+        video.videoHeight || canvas.height,
+        canvas.width,
+        canvas.height,
+        fit,
+      )
+      if (watermarkImage) {
+        drawWatermark(ctx, watermarkImage, canvas.width, canvas.height)
+      }
+    }
+    paintFrame()
+
+    if (audioContext && clipDestination && audioBuffer) {
+      const videoLeadSec = Math.max(0, video.currentTime - startSec)
+      const offset = Math.min(startSec + videoLeadSec, Math.max(0, audioBuffer.duration - 0.01))
+      const available = Math.max(0, audioBuffer.duration - offset)
+      const playDuration = Math.max(0, Math.min(segmentSec - videoLeadSec, available))
+      if (playDuration > 0.05) {
+        try {
+          bufferSource = audioContext.createBufferSource()
+          bufferSource.buffer = audioBuffer
+          let clipOutput: AudioNode = bufferSource
+          if (normalizeClip) {
+            // Peak-normalize so the volume dials mean the same thing however
+            // hot (or quiet) the mic recording is.
+            const channels = Array.from(
+              { length: audioBuffer.numberOfChannels },
+              (_, ch) => audioBuffer.getChannelData(ch),
+            )
+            normalizeGain = audioContext.createGain()
+            normalizeGain.gain.value = normalizationScale(channelPeak(channels))
+            bufferSource.connect(normalizeGain)
+            clipOutput = normalizeGain
+          }
+          clipOutput.connect(clipDestination)
+          bufferSource.start(audioContext.currentTime, offset, playDuration)
+        } catch {
+          bufferSource = null
+          normalizeGain = null
+        }
+      }
+    }
+
+    const wallStartedAt = performance.now()
+    await new Promise<void>((resolve, reject) => {
+      let raf = 0
+      let lastFrameAt = performance.now()
+      let lastVideoTime = video.currentTime
+
+      const finish = () => {
+        paintFrame()
+        cancelAnimationFrame(raf)
+        video.pause()
+        resolve()
+      }
+
+      const draw = () => {
+        if (signal?.aborted) {
+          cancelAnimationFrame(raf)
+          video.pause()
+          reject(new ExportCancelledError())
+          return
+        }
+        const now = performance.now()
+        let elapsed: number
+        if (playback === 'playing') {
+          elapsed = Math.max(0, video.currentTime - startSec)
+          if (video.ended || video.currentTime >= endSec - 0.04 || elapsed >= segmentSec - 0.03) {
+            finish()
+            return
+          }
+          if (video.currentTime > lastVideoTime + 0.001) {
+            lastVideoTime = video.currentTime
+            lastFrameAt = now
+          } else if (now - lastFrameAt > 8000) {
+            cancelAnimationFrame(raf)
+            video.pause()
+            reject(new Error('Clip playback stalled during export'))
+            return
+          }
+        } else {
+          // Autoplay blocked: advance the element on the wall clock and
+          // paint whatever frame WebKit has decoded. Do not await seeked —
+          // MediaRecorder is wall-clock paced and must keep receiving
+          // canvas frames in realtime.
+          elapsed = (now - wallStartedAt) / 1000
+          if (elapsed >= segmentSec - 0.03) {
+            finish()
+            return
+          }
+          const target = Math.min(endSec - 0.001, startSec + elapsed)
+          if (Math.abs(video.currentTime - target) > 0.02) {
+            video.currentTime = target
+          }
+        }
+        paintFrame()
+        if (frameCounter.count % PREVIEW_EVERY_N_FRAMES === 0) {
+          blitPreview(canvas, getPreviewCanvas?.())
+        }
+        if (frameCounter.count % 30 === 0) {
+          recordVideoLumaSample(canvas)
+        }
+        frameCounter.count += 1
+        onElapsedMs(Math.min(segmentSec, elapsed) * 1000)
+        raf = requestAnimationFrame(draw)
+      }
+
+      video.onerror = () => {
+        cancelAnimationFrame(raf)
+        reject(new Error('A clip failed to play during export'))
+      }
+      raf = requestAnimationFrame(draw)
+    })
+
+    return Math.round(segmentSec * 1000)
+  } finally {
+    video.onerror = null
+    try {
+      bufferSource?.stop()
+    } catch {
+      // already ended
+    }
+    bufferSource?.disconnect()
+    normalizeGain?.disconnect()
+  }
+}
+
+async function waitForPlaybackStart(video: HTMLVideoElement, startSec: number): Promise<void> {
+  if (video.currentTime > startSec + 0.01) return
+  const deadline = performance.now() + 1500
+  await new Promise<void>((resolve) => {
+    const tick = () => {
+      if (video.currentTime > startSec + 0.01 || video.ended || performance.now() > deadline) {
+        resolve()
+        return
+      }
+      requestAnimationFrame(tick)
+    }
+    tick()
+  })
+}

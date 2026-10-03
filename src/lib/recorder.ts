@@ -1,0 +1,620 @@
+import { isMediaElementFailure } from './export/media-error'
+import { measureBlobDuration, pickRecordingMimeType } from './media'
+import { recordingVideoBitsPerSecond } from './video-quality'
+
+export interface RecordingResult {
+  blob: Blob
+  mimeType: string
+  durationMs: number
+  /** Default trim-in: adopted warm sessions include pre-roll so the
+   * encoder-startup hole sits before the press, not in the kept range. */
+  trimStartMs: number
+  /** Default trim-out at the RELEASE point: the media runs STOP_GRACE_MS
+   * longer (see below), but the clip the user meant ends where they let go. */
+  trimEndMs: number
+  width?: number
+  height?: number
+  /** How this take's encoder ran — timings/counters for take reports. */
+  facts: RecordingSessionFacts
+}
+
+/** Frame counters from Chromium's MediaStreamTrack stats (absent elsewhere). */
+export interface TrackFrameCounts {
+  /** Frames the camera produced for this track. */
+  total: number
+  /** Frames handed to the track's sinks (the MediaRecorder). */
+  delivered: number
+  /** Frames dropped before reaching a sink. */
+  discarded: number
+}
+
+export interface RecordingSessionFacts {
+  /** Encoder age at the press. Under ~250ms the hardware encoder's startup
+   * hole can still fall inside the kept range (a cold start in practice). */
+  warmAgeMs: number
+  /** Encoder run from start to stop() (pre-roll + hold + grace). */
+  sessionMs: number
+  /** Actual stop grace (the timer can fire late under load). */
+  graceMs: number
+  /** stop() → onstop: how long the encoder took to hand back the file. */
+  flushMs: number
+  /** onstop → measured duration (container parse). */
+  measureMs: number
+  videoBitsPerSecond: number
+  /** Recorded clone's frame counters over the whole session. */
+  trackFrames?: TrackFrameCounts
+}
+
+interface TrackFrameStatsLike {
+  totalFrames?: number
+  deliveredFrames?: number
+  discardedFrames?: number
+}
+
+/** Snapshot `track.stats` (Chromium's MediaStreamTrackVideoStats). */
+export function readTrackFrameCounts(track: MediaStreamTrack | undefined): TrackFrameCounts | null {
+  try {
+    const stats = (track as { stats?: TrackFrameStatsLike } | undefined)?.stats
+    if (!stats || typeof stats.totalFrames !== 'number') return null
+    return {
+      total: stats.totalFrames,
+      delivered: stats.deliveredFrames ?? 0,
+      discarded: stats.discardedFrames ?? 0,
+    }
+  } catch {
+    return null
+  }
+}
+
+export function trackFrameCountsDelta(
+  start: TrackFrameCounts | null,
+  end: TrackFrameCounts | null,
+): TrackFrameCounts | undefined {
+  if (!start || !end) return undefined
+  return {
+    total: Math.max(0, end.total - start.total),
+    delivered: Math.max(0, end.delivered - start.delivered),
+    discarded: Math.max(0, end.discarded - start.discarded),
+  }
+}
+
+/** Ignore accidental taps shorter than this — they can't produce a real clip. */
+const MIN_TAKE_MS = 120
+
+/** Keep capturing briefly after release: platform audio encoders drop
+ * their final buffered samples at stop (iOS AAC loses ~100ms), which left
+ * every clip's tail silent — one half of the audible gap at every clip
+ * joint. The grace pushes that loss past the release point; the clip's
+ * default trim ends AT the release, so the kept range has sound all the
+ * way to its end (and the extra tail becomes trim-handle material). */
+const STOP_GRACE_MS = 200
+
+/** How long a video-only dummy encoder runs to initialize the hardware
+ * codec before the first take that cannot yet adopt a live session. */
+const WARMUP_MS = 400
+
+/** Bound warm-session memory: recycle the live encoder often enough that
+ * discarding a short tap does not have to flush a multi-second 1080p
+ * file. The startup hole lands in the discarded pre-roll of the new
+ * session. */
+const WARM_RECYCLE_MS = 1_500
+
+/** Release point on the media timeline: the media ends ~graceMs after the
+ * release, so walk back from the measured end — never under the minimum
+ * take length (the planner drops sub-50ms segments; a sliver of a trim
+ * range helps nobody). */
+export function takeTrimEndMs(measuredMs: number, graceMs: number): number {
+  return Math.min(measuredMs, Math.max(MIN_TAKE_MS, measuredMs - graceMs))
+}
+
+/** Default trim-in for a take that adopted a warm encoder: the kept range
+ * is the wall-clock hold, ending at trimEnd. Cold starts (no pre-roll)
+ * yield 0. */
+export function takeTrimStartMs(trimEndMs: number, takeWallMs: number): number {
+  if (takeWallMs <= 0) return 0
+  return Math.max(0, trimEndMs - takeWallMs)
+}
+
+/** Tell the encoder this clone is camera motion — not a slideshow —
+ * so it spends bits on movement instead of still-image sharpness. */
+export function hintVideoTrackMotion(track: MediaStreamTrack): void {
+  if ('contentHint' in track) track.contentHint = 'motion'
+}
+
+/** Blob length when media duration cannot be measured: encoder start →
+ * stop (adopted pre-roll + hold + grace). Never shorter than the hold,
+ * so a clock inversion cannot hide the take. */
+export function takeFallbackDurationMs(
+  sessionStartedAt: number,
+  stoppedAt: number,
+  takeWallMs: number,
+): number {
+  return Math.max(takeWallMs, Math.round(stoppedAt - sessionStartedAt))
+}
+
+/**
+ * Hold-to-record helper around MediaRecorder.
+ * Starts on press, stops on release; returns a Blob for IndexedDB storage.
+ */
+/** One take's private state. Handlers close over their own session, so a
+ * stale MediaRecorder event (a canceled take's stop arriving after the next
+ * take began) can only ever touch its own clones and chunks. */
+interface RecordingSession {
+  recorder: MediaRecorder
+  /** Recording consumes a CLONE of the preview's VIDEO track: MediaRecorder
+   * attaching/detaching directly on the live camera track makes some
+   * Android HALs reconfigure the capture pipeline, blanking the preview
+   * for a frame right when the take ends. Clones detach invisibly.
+   * The AUDIO track is the live mic itself, NOT a clone: a fresh audio
+   * clone has to attach to the capture graph at take start, which delivered
+   * silence for the first few hundred ms of every clip (the other half of
+   * the audible gap at every clip joint). The mic's lifecycle belongs to
+   * the camera (enableMic/releaseMic), so the session must never stop it. */
+  stream: MediaStream
+  /** The tracks this session cloned and therefore owns and stops. */
+  clonedTracks: MediaStreamTrack[]
+  chunks: BlobPart[]
+  mimeType: string
+  startedAt: number
+  /** Wall-clock press time when this warm session was adopted as a take.
+   * Absent on a cold start (press === recorder start). */
+  takeStartedAt?: number
+  trackWidth: number | undefined
+  trackHeight: number | undefined
+  videoBitsPerSecond: number
+  framesAtStart: TrackFrameCounts | null
+}
+
+function stopSessionTracks(session: RecordingSession): void {
+  session.clonedTracks.forEach((track) => {
+    track.stop()
+  })
+}
+
+function sessionHasLiveAudio(session: RecordingSession): boolean {
+  return session.stream.getAudioTracks().some((track) => track.readyState === 'live')
+}
+
+export class HoldRecorder {
+  private session: RecordingSession | null = null
+  /** Live encoder running before the press so the take can adopt it. */
+  private warm: RecordingSession | null = null
+  private warming = false
+  private dummyRecorder: MediaRecorder | null = null
+  private dummyClones: MediaStreamTrack[] = []
+  private stopping = false
+  private recycleTimer = 0
+  /** Preview stream the current warm/dummy encoder was built from.
+   * Camera swaps mint a new MediaStream; clones from the previous one
+   * keep the old camera open (Android exclusive HAL / privacy dot). */
+  private warmSource: MediaStream | null = null
+  private warmSourceEnded: (() => void) | null = null
+  /** Cuts a pending stop grace short — set only while a stop() is waiting
+   * out its grace window (see cancel()). */
+  private fireStopNow: (() => void) | null = null
+  private idleEncoders = { sessions: 0, encodeMs: 0 }
+  private dummyStartedAt = 0
+
+  /** Encoders that ran while no take was recording (warm sessions that
+   * were recycled/discarded, dummies, adopted pre-roll): how much hardware
+   * encode time the idle viewfinder costs — a heat/battery signal. */
+  idleEncoderUsage(): { sessions: number; encodeMs: number } {
+    return { ...this.idleEncoders }
+  }
+
+  private noteIdleEncode(startedAt: number): void {
+    this.idleEncoders.sessions += 1
+    this.idleEncoders.encodeMs += Math.max(0, Math.round(performance.now() - startedAt))
+  }
+
+  private warmSessionIsReusable(stream: MediaStream): boolean {
+    if (this.warmSource !== stream) return false
+    if (this.warm?.recorder.state !== 'recording') return false
+    if (!sessionHasLiveAudio(this.warm)) return false
+    return this.warm.clonedTracks.every((track) => track.readyState === 'live')
+  }
+
+  private unbindWarmSource(): void {
+    const stream = this.warmSource
+    const onEnded = this.warmSourceEnded
+    this.warmSource = null
+    this.warmSourceEnded = null
+    const video = stream?.getVideoTracks()[0]
+    if (video && onEnded) video.removeEventListener('ended', onEnded)
+  }
+
+  private bindWarmSource(stream: MediaStream): void {
+    this.unbindWarmSource()
+    this.warmSource = stream
+    const video = stream.getVideoTracks()[0]
+    if (!video) return
+    // Preview track.stop() (flip / lens / tab hide) must drop clones in
+    // the same turn the camera HAL is released — otherwise Android cannot
+    // open the next exclusive rear lens.
+    const onEnded = () => {
+      if (this.warmSource !== stream) return
+      this.disarm()
+    }
+    this.warmSourceEnded = onEnded
+    video.addEventListener('ended', onEnded)
+  }
+
+  get isRecording(): boolean {
+    return this.session?.recorder.state === 'recording'
+  }
+
+  /** Spin a live encoder on this stream so the next start() can adopt it
+   * (startup hole stays in discarded pre-roll). Requires a live audio
+   * track — MediaRecorder cannot add the mic later. No-ops while a take
+   * is running or a warm session is already live on a compatible stream. */
+  arm(stream: MediaStream): void {
+    if (this.isRecording || this.stopping) return
+    if (this.warmSessionIsReusable(stream)) return
+    if (!stream.getAudioTracks().some((track) => track.readyState === 'live')) {
+      this.warmUp(stream)
+      return
+    }
+    this.disarm()
+    const created = this.createSession(stream)
+    if (!created) return
+    this.warm = created
+    this.bindWarmSource(stream)
+    this.recycleTimer = window.setTimeout(() => {
+      this.recycleTimer = 0
+      if (this.session || this.stopping) return
+      this.disarm()
+      this.arm(stream)
+    }, WARM_RECYCLE_MS)
+  }
+
+  /** Video-only dummy start/stop to initialize the hardware encoder when
+   * the mic is not yet live (first Android take). Best-effort: a later
+   * real MediaRecorder may still pay startup, which is why arm() is
+   * preferred once audio is available. */
+  warmUp(stream: MediaStream): void {
+    if (this.isRecording || this.stopping) return
+    if (this.warmSessionIsReusable(stream)) return
+    if (this.warming && this.warmSource === stream) return
+    this.disarm()
+    const video = stream.getVideoTracks()[0]
+    if (!video || video.readyState !== 'live') return
+    this.stopDummy()
+    const clone = video.clone()
+    hintVideoTrackMotion(clone)
+    const warmStream = new MediaStream([clone])
+    try {
+      const settings = video.getSettings()
+      const recorder = this.makeRecorder(
+        warmStream,
+        recordingVideoBitsPerSecond(settings.width, settings.height),
+      )
+      this.warming = true
+      this.dummyRecorder = recorder
+      this.dummyClones = [clone]
+      this.bindWarmSource(stream)
+      recorder.ondataavailable = () => undefined
+      recorder.onstop = () => {
+        this.finishDummy(recorder)
+      }
+      recorder.onerror = () => {
+        this.finishDummy(recorder)
+      }
+      recorder.start()
+      this.dummyStartedAt = performance.now()
+      window.setTimeout(() => {
+        if (this.dummyRecorder === recorder && recorder.state !== 'inactive') {
+          try {
+            recorder.stop()
+          } catch {
+            this.finishDummy(recorder)
+          }
+        }
+      }, WARMUP_MS)
+    } catch {
+      clone.stop()
+      this.warming = false
+      this.dummyRecorder = null
+      this.dummyClones = []
+      this.unbindWarmSource()
+    }
+  }
+
+  /** Drop a warm/dummy encoder without saving. Safe during camera stop. */
+  disarm(): void {
+    this.stopDummy()
+    window.clearTimeout(this.recycleTimer)
+    this.recycleTimer = 0
+    const warm = this.warm
+    this.warm = null
+    this.unbindWarmSource()
+    if (!warm) return
+    this.noteIdleEncode(warm.startedAt)
+    warm.recorder.ondataavailable = null
+    warm.recorder.onstop = () => stopSessionTracks(warm)
+    warm.recorder.onerror = () => stopSessionTracks(warm)
+    if (warm.recorder.state !== 'inactive') {
+      try {
+        warm.recorder.stop()
+        return
+      } catch {
+        // Fall through — stop the clones directly.
+      }
+    }
+    stopSessionTracks(warm)
+  }
+
+  /** @returns true when a new recording actually started */
+  start(stream: MediaStream): boolean {
+    if (this.isRecording || this.stopping) return false
+
+    if (this.warmSessionIsReusable(stream)) {
+      const adopted = this.warm
+      if (!adopted) return false
+      this.warm = null
+      this.unbindWarmSource()
+      window.clearTimeout(this.recycleTimer)
+      this.recycleTimer = 0
+      this.stopDummy()
+      // Always stamp the press. A young session may still contain the
+      // startup hole, but take length must be press→release — otherwise a
+      // 40ms tap on a 200ms-old warm session looks like a 240ms take and
+      // is saved.
+      adopted.takeStartedAt = performance.now()
+      this.noteIdleEncode(adopted.startedAt)
+      this.session = adopted
+      return true
+    }
+
+    this.disarm()
+    const created = this.createSession(stream)
+    if (!created) return false
+    this.session = created
+    return true
+  }
+
+  /** `graceMs: 0` stops the MediaRecorder SYNCHRONOUSLY inside this call —
+   * background/unmount teardown stops the camera right after, and the
+   * encoder must have flushed by then. */
+  stop(options?: { graceMs?: number }): Promise<RecordingResult | null> {
+    const session = this.session
+    if (!session || session.recorder.state === 'inactive') {
+      if (session) stopSessionTracks(session)
+      this.session = null
+      this.stopping = false
+      return Promise.resolve(null)
+    }
+
+    this.stopping = true
+    const releaseAt = performance.now()
+    const takeStartedAt = session.takeStartedAt ?? session.startedAt
+    const takeWallMs = Math.max(0, Math.round(releaseAt - takeStartedAt))
+    const finishSession = () => {
+      this.fireStopNow = null
+      stopSessionTracks(session)
+      if (this.session === session) {
+        this.session = null
+        this.stopping = false
+      }
+    }
+
+    return new Promise((resolve, reject) => {
+      /** How long the recorder actually kept running past the release —
+       * the timer can fire late under load, and the trim-back must walk
+       * back by the REAL overshoot or it would eat kept content. */
+      let graceActualMs = 0
+      let stopCalledAt = 0
+      let framesAtStop: TrackFrameCounts | null = null
+      session.recorder.onstop = () => {
+        const stoppedAt = performance.now()
+        finishSession()
+        const blob = new Blob(session.chunks, { type: session.mimeType })
+        const width = session.trackWidth
+        const height = session.trackHeight
+        if (blob.size === 0 || takeWallMs < MIN_TAKE_MS) {
+          resolve(null)
+          return
+        }
+        const fallbackMs = takeFallbackDurationMs(session.startedAt, stoppedAt, takeWallMs)
+        const facts = (): RecordingSessionFacts => ({
+          warmAgeMs: Math.max(0, Math.round(takeStartedAt - session.startedAt)),
+          sessionMs: Math.round((stopCalledAt || stoppedAt) - session.startedAt),
+          graceMs: graceActualMs,
+          flushMs: stopCalledAt ? Math.round(stoppedAt - stopCalledAt) : 0,
+          measureMs: Math.round(performance.now() - stoppedAt),
+          videoBitsPerSecond: session.videoBitsPerSecond,
+          trackFrames: trackFrameCountsDelta(session.framesAtStart, framesAtStop),
+        })
+        // The blob's real duration differs from wall clock (encoder start
+        // latency, stop grace, adopted pre-roll); trims and export math
+        // must use the media duration.
+        void measureBlobDuration(blob)
+          .then((measuredMs) => {
+            const durationMs = measuredMs > 0 ? measuredMs : fallbackMs
+            const trimEndMs = takeTrimEndMs(durationMs, graceActualMs)
+            resolve({
+              blob,
+              mimeType: session.mimeType || blob.type || 'video/webm',
+              durationMs,
+              trimStartMs: takeTrimStartMs(trimEndMs, takeWallMs),
+              trimEndMs,
+              width,
+              height,
+              facts: facts(),
+            })
+          })
+          .catch((error) => {
+            // A media-element failure means the browser cannot decode this
+            // take at all — keeping it would only fail again at export.
+            // Timeouts still fall back to session wall-clock (streamy WebM)
+            // so adopted pre-roll stays outside the kept range.
+            if (isMediaElementFailure(error)) {
+              resolve(null)
+              return
+            }
+            const trimEndMs = takeTrimEndMs(fallbackMs, graceActualMs)
+            resolve({
+              blob,
+              mimeType: session.mimeType || blob.type || 'video/webm',
+              durationMs: fallbackMs,
+              trimStartMs: takeTrimStartMs(trimEndMs, takeWallMs),
+              trimEndMs,
+              width,
+              height,
+              facts: facts(),
+            })
+          })
+      }
+      session.recorder.onerror = () => {
+        finishSession()
+        reject(new Error('Recording failed'))
+      }
+      const graceMs =
+        takeWallMs < MIN_TAKE_MS ? 0 : (options?.graceMs ?? STOP_GRACE_MS)
+      let graceTimer = 0
+      const fire = () => {
+        window.clearTimeout(graceTimer)
+        this.fireStopNow = null
+        graceActualMs = Math.round(performance.now() - releaseAt)
+        if (session.recorder.state !== 'inactive') {
+          framesAtStop = readTrackFrameCounts(session.clonedTracks[0])
+          stopCalledAt = performance.now()
+          session.recorder.stop()
+        }
+      }
+      if (graceMs <= 0) {
+        fire()
+      } else {
+        this.fireStopNow = fire
+        graceTimer = window.setTimeout(fire, graceMs)
+      }
+    })
+  }
+
+  cancel(): void {
+    this.disarm()
+    // A stop() already owns this session (waiting out its grace, or
+    // awaiting onstop): hasten it and let its save resolve. Discarding
+    // here would orphan the pending stop() promise — endRecord would hang
+    // and a take the user properly released would be lost.
+    if (this.stopping) {
+      this.fireStopNow?.()
+      return
+    }
+    const session = this.session
+    this.session = null
+    this.stopping = false
+    if (!session) return
+    // Stale events from this session must only clean up after themselves.
+    session.recorder.ondataavailable = null
+    session.recorder.onstop = () => stopSessionTracks(session)
+    session.recorder.onerror = () => stopSessionTracks(session)
+    if (session.recorder.state !== 'inactive') {
+      try {
+        session.recorder.stop()
+        return
+      } catch {
+        // Fall through — stop the clones directly.
+      }
+    }
+    stopSessionTracks(session)
+  }
+
+  private finishDummy(recorder: MediaRecorder): void {
+    if (this.dummyRecorder === recorder) {
+      this.noteIdleEncode(this.dummyStartedAt)
+      this.dummyClones.forEach((track) => {
+        track.stop()
+      })
+      this.dummyRecorder = null
+      this.dummyClones = []
+      this.warming = false
+    }
+  }
+
+  private stopDummy(): void {
+    const recorder = this.dummyRecorder
+    const clones = this.dummyClones
+    this.dummyRecorder = null
+    this.dummyClones = []
+    this.warming = false
+    if (!recorder) return
+    this.noteIdleEncode(this.dummyStartedAt)
+    recorder.ondataavailable = null
+    recorder.onstop = () => {
+      clones.forEach((track) => {
+        track.stop()
+      })
+    }
+    recorder.onerror = () => {
+      clones.forEach((track) => {
+        track.stop()
+      })
+    }
+    if (recorder.state !== 'inactive') {
+      try {
+        recorder.stop()
+        return
+      } catch {
+        // Fall through.
+      }
+    }
+    clones.forEach((track) => {
+      track.stop()
+    })
+  }
+
+  private makeRecorder(recordStream: MediaStream, videoBitsPerSecond: number): MediaRecorder {
+    const preferredMime = pickRecordingMimeType()
+    return preferredMime
+      ? new MediaRecorder(recordStream, {
+          mimeType: preferredMime,
+          videoBitsPerSecond,
+          audioBitsPerSecond: 192_000,
+        })
+      : new MediaRecorder(recordStream)
+  }
+
+  private createSession(stream: MediaStream): RecordingSession | null {
+    const settings = stream.getVideoTracks()[0]?.getSettings()
+    const clones = stream.getVideoTracks().map((track) => {
+      const clone = track.clone()
+      hintVideoTrackMotion(clone)
+      return clone
+    })
+    const recordStream = new MediaStream([...clones, ...stream.getAudioTracks()])
+
+    try {
+      const videoBitsPerSecond = recordingVideoBitsPerSecond(settings?.width, settings?.height)
+      const recorder = this.makeRecorder(recordStream, videoBitsPerSecond)
+      const preferredMime = pickRecordingMimeType()
+      const session: RecordingSession = {
+        recorder,
+        stream: recordStream,
+        clonedTracks: clones,
+        chunks: [],
+        mimeType: recorder.mimeType || preferredMime || 'video/webm',
+        startedAt: performance.now(),
+        trackWidth: settings?.width,
+        trackHeight: settings?.height,
+        videoBitsPerSecond,
+        framesAtStart: readTrackFrameCounts(clones[0]),
+      }
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) session.chunks.push(event.data)
+      }
+      // No timeslice: mid-take Blob events on the main thread are extra
+      // work during the hold. Clips and 1.5s warm sessions fit in memory;
+      // the muxed file arrives once, on stop.
+      recorder.start()
+      return session
+    } catch {
+      // Constructor/start can throw (unsupported params, dead tracks) —
+      // the clones must not outlive the failed attempt. (Never the audio
+      // track: that is the camera's live mic.)
+      clones.forEach((track) => {
+        track.stop()
+      })
+      return null
+    }
+  }
+}
