@@ -572,7 +572,7 @@ export async function setClipFit(clipId: ClipId, fit: ClipFit): Promise<void> {
   await updateClipFit(clipId, fit)
 }
 
-/** Change the film's export orientation. Landscape requires Plus. */
+/** Change the film's export orientation. */
 export async function setFilmOrientation(
   projectId: ProjectId,
   orientation: ProjectOrientation,

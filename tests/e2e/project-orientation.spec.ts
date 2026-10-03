@@ -105,19 +105,21 @@ test.describe('project orientation', () => {
       .toBe(true)
   })
 
-  test('fine-pointer (desktop-like) recording never locks an orientation', async ({ page }) => {
-    // Webcams and screen shares are landscape media without that being a
-    // choice — desktop projects stay unlocked and keep the classic column.
+  test('fine-pointer (desktop-like) recording locks from the clip pixels', async ({ page }) => {
+    // No held device to read, so the first take's pixels decide: the fake
+    // webcam is landscape, so the film locks landscape.
     await openNewProject(page)
 
     await recordClip(page)
 
-    const orientation = await page.evaluate(async () => {
-      const storage = await import('/src/lib/storage.ts')
-      return (await storage.listProjects())[0]?.orientation
-    })
-    expect(orientation).toBeUndefined()
-    expect(await shellLayout(page)).toBe('narrow')
+    await expect
+      .poll(() =>
+        page.evaluate(async () => {
+          const storage = await import('/src/lib/storage.ts')
+          return (await storage.listProjects())[0]?.orientation
+        }),
+      )
+      .toBe('landscape')
   })
 
   test('landscape projects export a landscape file from portrait clips', async ({ page }) => {

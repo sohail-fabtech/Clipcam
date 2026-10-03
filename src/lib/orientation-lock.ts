@@ -6,10 +6,9 @@ import type { ClipRecord, ProjectId } from './types'
 /**
  * The first clip sets the film's orientation. On a phone, how the device
  * is held wins: camera tracks are often landscape pixels even when the
- * user is recording upright. Recording on desktop never locks — webcams and
- * screen shares are landscape without that being a choice. Imports use the
- * clip's pixels (viewport only when size is unknown on a held device).
- * Later clips never overwrite a choice.
+ * user is recording upright. Imports and desktop use the clip's pixels
+ * (viewport only when size is unknown on a held device). Later clips never
+ * overwrite a choice.
  */
 export async function lockOrientationFromFirstClip(
   projectId: ProjectId,
@@ -20,7 +19,9 @@ export async function lockOrientationFromFirstClip(
   if (!project || project.clipIds.length !== 1) return
   const fromClip = orientationFromSize(clip.width, clip.height)
   const held = heldDeviceOrientation()
-  const chosen = options?.preferHeldOrientation ? held : (fromClip ?? held)
+  const chosen = options?.preferHeldOrientation
+    ? (held ?? fromClip)
+    : (fromClip ?? held)
   if (!chosen) return
   await setProjectOrientation(projectId, chosen).catch(() => undefined)
 }

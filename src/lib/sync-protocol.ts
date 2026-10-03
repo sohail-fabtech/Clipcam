@@ -1,4 +1,4 @@
-/** Shared wire types for Plus “Send to device” (signaling + DataChannel). */
+/** Shared wire types for “Send to device” (signaling + DataChannel). */
 
 export const ROOM_CODE_LENGTH = 6
 /** Crockford-ish: no 0/O/1/I so a code read off a phone is unambiguous. */

@@ -271,7 +271,7 @@ describe('project backup round trip', () => {
   })
 
   it('rejects non-backup files', async () => {
-    await expect(parseProjectBackup(new Blob(['just a video']))).rejects.toThrow(/not a kody video/i)
+    await expect(parseProjectBackup(new Blob(['just a video']))).rejects.toThrow(/not a clipcam/i)
   })
 
   it('marks validation failures as BackupFormatError (kept out of crash reporting)', async () => {
