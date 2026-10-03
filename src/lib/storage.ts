@@ -1,7 +1,6 @@
 import { openDB, type DBSchema, type IDBPDatabase, type IDBPTransaction } from 'idb'
 import { removeExportEntry } from './export/opfs'
 import {
-  FREE_PROJECTS,
   MAX_PROJECTS,
   clampImageDurationMs,
   clampVolume,
@@ -402,7 +401,7 @@ export async function getSettings(): Promise<AppMeta> {
       onboardingDismissed: false,
     }
     const settings = existing ? { ...defaults, ...existing } : defaults
-    setActiveVideoQuality(settings.videoQuality, settings.watermarkRemoved === true)
+    setActiveVideoQuality(settings.videoQuality)
     if (!existing || existing.onboardingDismissed === undefined) {
       await db.put('meta', settings)
     }
@@ -431,9 +430,6 @@ export async function setTourCardDismissed(tourCardDismissed: boolean): Promise<
 export async function setLocationTaggingEnabled(locationTaggingEnabled: boolean): Promise<void> {
   const db = await getDb()
   const settings = await getSettings()
-  if (locationTaggingEnabled && settings.watermarkRemoved !== true) {
-    throw new PlusRequiredError('Location tagging is a Kody Video Plus perk.')
-  }
   await db.put('meta', { ...settings, locationTaggingEnabled })
 }
 
@@ -454,22 +450,10 @@ export async function setVideoQuality(videoQuality: VideoQualityPreset): Promise
   return enqueueMetaWrite(async () => {
     const db = await getDb()
     const settings = await getSettings()
-    const plus = settings.watermarkRemoved === true
-    if (videoQuality === 'high' && !plus) {
-      throw new PlusRequiredError('High video quality is a Kody Video Plus perk.')
-    }
-    const next = resolveVideoQuality(videoQuality, plus)
-    setActiveVideoQuality(next, plus)
+    const next = resolveVideoQuality(videoQuality)
+    setActiveVideoQuality(next)
     await db.put('meta', { ...settings, videoQuality: next })
     return next
-  })
-}
-
-export async function setKeepWatermark(keepWatermark: boolean): Promise<void> {
-  await enqueueMetaWrite(async () => {
-    const db = await getDb()
-    const settings = await getSettings()
-    await db.put('meta', { ...settings, keepWatermark })
   })
 }
 
@@ -479,9 +463,6 @@ export async function setIncludeLocationInExports(
   await enqueueMetaWrite(async () => {
     const db = await getDb()
     const settings = await getSettings()
-    if (includeLocationInExports && settings.watermarkRemoved !== true) {
-      throw new PlusRequiredError('Location export is a Kody Video Plus perk.')
-    }
     await db.put('meta', { ...settings, includeLocationInExports })
   })
 }
@@ -498,8 +479,8 @@ export async function getProject(id: ProjectId): Promise<Project | undefined> {
 }
 
 /**
- * Soft project-cap / free-plan gate. Surfaced in-app as guidance (toast,
- * upsell); expected product behavior, never a crash report.
+ * Soft project-cap gate. Surfaced in-app as guidance (toast); expected
+ * product behavior, never a crash report.
  */
 export class ProjectLimitError extends Error {
   override readonly name = 'ProjectLimitError'
@@ -517,15 +498,6 @@ export async function createProject(
       `Project limit reached (${settings.maxProjects}). Delete a project to create another.`,
     )
   }
-  // Free tier includes one project; the one-time Kody Video Plus purchase
-  // (the watermark unlock) raises the cap to maxProjects. Enforced here so
-  // every creation path (record, import) hits the same gate.
-  if (settings.watermarkRemoved !== true && existing.length >= FREE_PROJECTS) {
-    throw new ProjectLimitError(
-      'The free plan includes 1 project — Kody Video Plus unlocks 6 (and removes the watermark).',
-    )
-  }
-  if (options?.orientation === 'landscape') assertLandscapeAllowed(settings)
 
   const now = Date.now()
   const chosenName = name?.trim()
@@ -572,37 +544,18 @@ export async function renameProject(id: ProjectId, name: string): Promise<Projec
 }
 
 /**
- * A Kody Video Plus perk was used without the entitlement. Surfaced in-app
- * as the upsell; expected product behavior, never a crash report.
- */
-export class PlusRequiredError extends Error {
-  override readonly name = 'PlusRequiredError'
-}
-
-function assertLandscapeAllowed(settings: Pick<AppMeta, 'watermarkRemoved'>): void {
-  if (settings.watermarkRemoved !== true) {
-    throw new PlusRequiredError('Landscape projects are a Kody Video Plus perk.')
-  }
-}
-
-/**
  * Set the project's orientation — the lock primitive behind the first-take
- * rule (appendRecording) and backup restore. Landscape requires the Plus
- * entitlement (enforced here so every path hits the same gate); portrait is
- * always allowed and clears the stored field, so a portrait project is
+ * rule (appendRecording) and backup restore. Portrait clears the stored
+ * field, so a portrait project is
  * indistinguishable from one made before orientation existed.
  */
 export async function setProjectOrientation(
   id: ProjectId,
   orientation: ProjectOrientation,
 ): Promise<Project> {
-  // Entitlement first, then a single read-modify-write transaction: rapid
-  // toggles issue overlapping calls, and IndexedDB serializes same-scope
-  // readwrite transactions in creation order — so the user's last tap is
-  // also the last commit. A read outside the transaction (or an await
-  // between paths) would let an earlier landscape write land after a later
-  // portrait one.
-  if (orientation === 'landscape') assertLandscapeAllowed(await getSettings())
+  // A single read-modify-write transaction: rapid toggles issue overlapping
+  // calls, and IndexedDB serializes same-scope readwrite transactions in
+  // creation order — so the user's last tap is also the last commit.
   const db = await getDb()
   const tx = db.transaction('projects', 'readwrite')
   const project = await tx.store.get(id)
@@ -1294,13 +1247,6 @@ export async function addProjectAudioTrack(
   input: AddProjectAudioTrackInput,
 ): Promise<ProjectAudioRecord> {
   const db = await getDb()
-  // Background music is a Kody Video Plus perk — enforced here so every
-  // path that could attach a track (editor picker, backup import) hits the
-  // same gate, like the project cap in createProject.
-  const settings = await getSettings()
-  if (settings.watermarkRemoved !== true) {
-    throw new Error('Background music is part of Kody Video Plus — the one-time $0.99 unlock.')
-  }
   const durableBlob = await toStoredBlob(input.blob, input.mimeType)
   const track: ProjectAudioTrack = {
     id: newId('track'),

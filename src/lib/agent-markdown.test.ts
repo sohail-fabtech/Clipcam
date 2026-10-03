@@ -8,7 +8,7 @@ import {
 } from '../../functions/lib/agent-markdown'
 
 function request(path: string, init?: RequestInit) {
-  return new Request(`https://kody.video${path}`, init)
+  return new Request(`https://clipcam.app${path}`, init)
 }
 
 describe('pageIdForPath', () => {
@@ -42,14 +42,13 @@ describe('renderAgentMarkdown', () => {
   it('emits frontmatter and the no-account rule', () => {
     const home = renderAgentMarkdown('home')
     expect(home.startsWith('---\n')).toBe(true)
-    expect(home).toContain('title: Kody Video')
+    expect(home).toContain('title: Clipcam')
     expect(home).toContain('No accounts')
 
     const auth = renderAgentMarkdown('auth')
     expect(auth).toContain('no accounts')
-    expect(auth).toContain('/api/verify-purchase')
-    expect(auth).toContain('session_id=<CHECKOUT_SESSION_ID>')
-    expect(auth).toContain('https://buy.stripe.com/00wfZi71ibU30rk9hU2Ry07')
+    expect(auth).toContain('no purchases')
+    expect(auth).not.toMatch(/stripe|verify-purchase|\$0\.99/i)
     expect(auth).toContain('Do not invent a sign-in flow')
   })
 })
@@ -64,7 +63,7 @@ describe('agentMarkdownResponse', () => {
     expect(response?.headers.get('content-signal')).toContain('search=yes')
     expect(response?.headers.get('vary')).toBe('Accept')
     const body = await response!.text()
-    expect(body).toContain('# About Kody Video')
+    expect(body).toContain('# About Clipcam')
     expect(body).toContain('Private by design')
   })
 
