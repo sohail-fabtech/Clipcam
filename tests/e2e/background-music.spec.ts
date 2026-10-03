@@ -2,7 +2,6 @@ import { test, expect, type Page } from '@playwright/test'
 import {
   openSeededProject,
   seedProject,
-  unlockPlus,
   waitForCameraReady,
 } from './helpers'
 
@@ -41,7 +40,6 @@ async function openEditor(page: Page): Promise<void> {
 
 async function openPlusEditorWithClips(page: Page, clips: number): Promise<string> {
   const projectId = await seedProject(page, { clips, clipMs: 3000 })
-  await unlockPlus(page)
   await page.goto(`/project/${projectId}`)
   await waitForCameraReady(page)
   await openEditor(page)
@@ -122,23 +120,6 @@ async function storedClipVolumes(
 }
 
 test.describe('background music', () => {
-  test('free plan shows the locked Add music button and opens the Plus upsell', async ({
-    page,
-  }) => {
-    await openSeededProject(page, { clips: 1 })
-    await openEditor(page)
-
-    const locked = page.getByRole('button', { name: /Add background music.*Plus/ })
-    await expect(locked).toBeVisible()
-    await locked.click()
-    const sheet = page.getByRole('dialog', { name: 'Kody Video Plus' })
-    await expect(sheet).toBeVisible()
-    await expect(sheet).toContainText(/background music/i)
-    await sheet.getByRole('button', { name: 'Not now' }).click()
-    await expect(sheet).toBeHidden()
-    expect(await storedAudio(page)).toBeNull()
-  })
-
   test('normalizes clip audio automatically on project load', async ({ page }) => {
     await openSeededProject(page, { clips: 2 })
     // The loader backfill measures and persists every clip's audio peak
@@ -160,12 +141,12 @@ test.describe('background music', () => {
       .toBe(true)
   })
 
-  test('sets the clip sound volume without music (free plan)', async ({ page }) => {
+  test('sets the clip sound volume without music ', async ({ page }) => {
     await openSeededProject(page, { clips: 1 })
     await openEditor(page)
 
-    // The clip-sound slider lives next to the (locked) Add music button —
-    // it is about the clip, not the playlist.
+    // The clip-sound slider lives next to the Add music button — it is
+    // about the clip, not the playlist.
     await setSlider(page, 'Clip 1 sound volume', 30)
     await expect
       .poll(async () => (await storedClipVolumes(page))[0]?.clipVolume)
@@ -420,7 +401,6 @@ test.describe('background music', () => {
       const updatedClips = await storage.getClipsForProject(project.id)
 
       const result = await exportProject(updatedClips, {
-        watermark: false,
         background: {
           tracks: audio.tracks.map(
             (track: {

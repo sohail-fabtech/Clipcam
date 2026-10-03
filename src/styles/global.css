@@ -528,13 +528,6 @@ a {
   font-size: 0.9rem;
 }
 
-.watermark-note {
-  margin: 14px 0 0;
-  font-size: 0.85rem;
-  color: var(--ink-muted);
-  line-height: 1.5;
-}
-
 .export-prefs {
   margin-top: 14px;
   display: flex;
@@ -580,38 +573,6 @@ a {
   font-weight: 700;
   text-decoration: underline;
   text-underline-offset: 2px;
-}
-
-/* Post-checkout landing (/unlocked) */
-.unlocked-screen {
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-}
-
-.unlocked-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  max-width: 340px;
-}
-
-.unlocked-card h1 {
-  font-family: var(--font-display);
-  font-size: 1.9rem;
-  letter-spacing: -0.03em;
-  margin: 0;
-}
-
-.unlocked-card p {
-  line-height: 1.5;
-  margin: 0;
-}
-
-.unlocked-card .btn {
-  margin-top: 12px;
-  min-width: 220px;
 }
 
 .export-celebrate-art {
@@ -1172,7 +1133,7 @@ a {
 /* Shell width by layout mode (mirrored in index.html's critical CSS). The
    app frame is a phone-shaped 480px column by default; <html data-shell>
    picks the layout per page:
-   - 'adaptive' (home, about, privacy, terms, unlocked — set pre-paint in
+   - 'adaptive' (home, about, privacy, terms — set pre-paint in
      index.html and on navigation in main.tsx): widens on landscape
      viewports, which includes desktop windows by default.
    - 'wide' (locked-landscape projects, set by the project page): always

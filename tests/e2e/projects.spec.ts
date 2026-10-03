@@ -151,15 +151,19 @@ test.describe('project slots', () => {
     await page.getByRole('button', { name: 'Save backup' }).click()
     const backupPath = await (await downloadPromise).path()
 
-    // Still at the free 1-project cap — importing a second must be refused.
+    // Fill every remaining slot — importing one more must be refused.
+    await page.evaluate(async (count) => {
+      const storage = await import('/src/lib/storage.ts')
+      for (let i = 0; i < count; i += 1) await storage.createProject(`Filler ${i + 1}`)
+    }, 5)
     await page.goto('/about')
     await page.locator('.about-import input[type="file"]').setInputFiles(backupPath)
-    await expect(page.locator('.error-banner')).toContainText(/free plan|limit/i)
+    await expect(page.locator('.error-banner')).toContainText(/limit/i)
     const projects = await page.evaluate(async () => {
       const storage = await import('/src/lib/storage.ts')
       return (await storage.listProjects()).length
     })
-    expect(projects).toBe(1)
+    expect(projects).toBe(6)
   })
 
   test('slot order is stable after opening a project', async ({ page }) => {

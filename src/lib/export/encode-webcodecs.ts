@@ -47,7 +47,6 @@ import {
   decodeBackgroundAudio,
   decodeClipAudio,
   drawFitFrom,
-  drawWatermark,
   loadClipImage,
   loadClipVideo,
   playExportVideo,
@@ -121,7 +120,7 @@ async function pickCodecs(width: number, height: number): Promise<CodecChoice | 
  * Frame-accurate export built on Mediabunny: each clip's samples are
  * demuxed and decoded directly (no playback, no compositor dependency — the
  * frame supply runs at hardware speed and keeps flowing in background
- * tabs), composited onto one canvas with the watermark, and encoded/muxed
+ * tabs), composited onto one canvas, and encoded/muxed
  * by Mediabunny, which owns the codec-config, packet-ordering, and
  * container details we used to hand-roll (and debug, chunk by chunk, on
  * iOS). Audio is decoded per clip and appended sample-accurately, so clips
@@ -132,7 +131,6 @@ export async function exportWithWebCodecs(
   plan: ExportPlan,
   onProgress?: (ratio: number) => void,
   getPreviewCanvas?: () => HTMLCanvasElement | null,
-  watermarkImage?: HTMLImageElement | null,
   background?: BackgroundAudio | null,
   orientation?: ProjectOrientation,
   includeLocation = false,
@@ -454,7 +452,6 @@ export async function exportWithWebCodecs(
           state,
           // No mirroring needed when the encode canvas is the preview.
           getPreviewCanvas: encodingIntoPreview ? undefined : getPreviewCanvas,
-          watermarkImage,
           signal,
           fit: clipCanvasFit(segment.clip),
           onElapsedMs: (elapsed: number) => {
@@ -677,7 +674,6 @@ interface PumpSharedArgs {
   videoSource: CanvasSource
   state: PumpState
   getPreviewCanvas?: () => HTMLCanvasElement | null
-  watermarkImage?: HTMLImageElement | null
   signal?: AbortSignal
   fit: 'cover' | 'contain'
   onElapsedMs: (elapsedMs: number) => void
@@ -694,7 +690,6 @@ function makeFrameSink({
   videoSource,
   state,
   getPreviewCanvas,
-  watermarkImage,
   signal,
 }: PumpSharedArgs) {
   return (
@@ -732,9 +727,6 @@ function makeFrameSink({
         emitTsSec = state.lastVideoTsSec + 0.001
       }
       draw(ctx, canvas.width, canvas.height)
-      if (watermarkImage) {
-        drawWatermark(ctx, watermarkImage, canvas.width, canvas.height)
-      }
       state.lastVideoTsSec = emitTsSec
       state.nextFrameTsSec = plan.nextFrameTsSec
       const now = performance.now()

@@ -86,7 +86,7 @@ test.describe('photo clips on the timeline', () => {
     await expect(page.locator('.editor-screen')).toBeVisible()
 
     await page
-      .locator('.editor-screen input[type="file"]')
+      .locator('.editor-screen input[type="file"][multiple]')
       .setInputFiles({ name: 'vacation.png', mimeType: 'image/png', buffer: TINY_PNG })
 
     await expect(page.locator('.toast')).toContainText('Clip added')
