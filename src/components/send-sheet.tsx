@@ -23,7 +23,7 @@ function phaseCopy(phase: SyncPhase, error: string | null): string {
     case 'creating':
       return 'Starting a send room…'
     case 'waiting':
-      return `Open ${pairingHint('receive')} on the other device and scan or type this code. Keep both screens open.`
+      return `Open ${pairingHint()} on the other device and scan or type this code. Keep both screens open.`
     case 'connecting':
       return 'Connecting to the other device…'
     case 'transferring':
@@ -41,7 +41,7 @@ function phaseCopy(phase: SyncPhase, error: string | null): string {
   }
 }
 
-/** Plus: push this project to another device over WebRTC (STUN, no cloud copy). */
+/** Push this project to another device over WebRTC (STUN, no cloud copy). */
 export function SendSheet(handle: Handle<SendSheetProps>) {
   let phase: SyncPhase = 'creating'
   let code: string | null = null
@@ -106,7 +106,7 @@ export function SendSheet(handle: Handle<SendSheetProps>) {
     }
   })()
 
-  const receiveHref = () => pairingHref('receive', code)
+  const receiveHref = () => pairingHref(code)
 
   return () => {
     const { projectName, onClose, onBackupInstead } = handle.props
