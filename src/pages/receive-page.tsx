@@ -138,7 +138,7 @@ export function ReceivePage(handle: Handle<ReceivePageProps>) {
       </div>
       <div className="about-body">
         <div className="about-hero" aria-hidden="true">
-          <BrandMark size={96} className="brand-hero-art" variant="share" />
+          <BrandMark size={96} className="brand-hero-art" />
         </div>
         <h1>Receive a project</h1>
         <p className="muted">{phaseCopy(phase, error, Boolean(handle.props.code))}</p>

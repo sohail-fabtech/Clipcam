@@ -598,7 +598,7 @@
   border-radius: 999px;
   font-size: 0.74rem;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accent-text);
   background: color-mix(in srgb, var(--accent) 14%, transparent);
 }
 
@@ -685,7 +685,7 @@
   width: 22px;
   height: 22px;
   border-radius: 7px;
-  color: var(--accent);
+  color: var(--accent-text);
   background: color-mix(in srgb, var(--accent) 16%, transparent);
   flex: 0 0 auto;
 }
@@ -719,7 +719,7 @@
   border-radius: 999px;
   font-size: 0.74rem;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accent-text);
   background: color-mix(in srgb, var(--accent) 14%, transparent);
   flex: 0 0 auto;
 }
@@ -837,7 +837,7 @@
 
 .audio-track-open:hover .audio-track-name,
 .audio-track-open:focus-visible .audio-track-name {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 /* Audio track detail view (the audio counterpart of the trim strip) */
@@ -864,7 +864,7 @@
 
 .audio-detail-name svg {
   flex: 0 0 auto;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .audio-detail-track {
@@ -1004,11 +1004,11 @@
 
 .editor-action.prominent {
   background: color-mix(in srgb, var(--accent) 18%, transparent);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .editor-action.prominent .editor-action-label {
-  color: var(--accent);
+  color: var(--accent-text);
   font-weight: 700;
 }
 

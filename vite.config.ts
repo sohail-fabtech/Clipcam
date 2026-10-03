@@ -142,8 +142,7 @@ export default defineConfig({
       includeAssets: [
         'favicon.png',
         'apple-touch-icon.png',
-        'kody-mark.webp',
-        'art/*.webp',
+        'logo.svg',
         'fonts/*.woff2',
         'robots.txt',
         'llms.txt',
@@ -154,8 +153,8 @@ export default defineConfig({
         short_name: 'Clipcam',
         description:
           'Hold anywhere to record clips. Clipcam keeps projects private on your device until you share — free, no watermark.',
-        theme_color: '#2F3E46',
-        background_color: '#2F3E46',
+        theme_color: '#0B0D10',
+        background_color: '#0B0D10',
         display: 'standalone',
         // 'any': installed apps must rotate — an empty project's interface
         // follows the device (that's how orientation is chosen), and home /
@@ -196,12 +195,10 @@ export default defineConfig({
         // document reuse; the precache lookup must ignore that mark.
         ignoreURLParametersMatching: [/^utm_/, /^fbclid$/, /^_sw$/],
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
-        // Not part of the app shell: the social card is for link scrapers
-        // and the icon master is only the source for generated icons.
+        // Not part of the app shell: the social card is for link scrapers.
         // Source maps are served on demand for debugging — do not precache.
         globIgnores: [
           '**/og-image.png',
-          '**/art/kody-video-icon.png',
           '**/*.map',
           // Network-only: About / resume probes compare this to the running
           // bundle SHA. Precaching it would make a stale shell look current.

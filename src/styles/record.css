@@ -711,7 +711,7 @@
 
 .mic-option-check {
   flex-shrink: 0;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 /* Narrow phones: keep tools + Go on one row without overflow. */

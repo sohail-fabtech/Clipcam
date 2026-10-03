@@ -33,6 +33,7 @@ import { clearExportCache } from '../lib/export/export-cache'
 import { reportError } from '../lib/error-reporting'
 import { canPromptInstall, promptInstall, subscribeInstallPrompt } from '../lib/install-prompt'
 import { dismissIosInstallHint, shouldShowIosInstallHint } from '../lib/install-hint'
+import { markProjectSeen, projectChange } from '../lib/seen-projects'
 import { navigate } from '../router'
 import { formatBytes, formatStoragePercent, storageSeverity } from '../lib/storage-space'
 import {
@@ -319,7 +320,6 @@ export function HomePage(handle: Handle) {
             <BrandMark
               size={96}
               className="brand-hero-art"
-              variant="camera"
               priority={
                 typeof window !== 'undefined' &&
                 window.matchMedia('(max-width: 719px) and (orientation: portrait)').matches
@@ -327,7 +327,7 @@ export function HomePage(handle: Handle) {
             />
           </div>
           <h1 className="brand">Clipcam</h1>
-          <p className="lede">Hold to record. Tap Go to share.</p>
+          <p className="lede">Hold to record · Tap Go to share</p>
         </div>
 
         <div className="home-main">
@@ -414,13 +414,36 @@ export function HomePage(handle: Handle) {
           ) : null}
 
           <section className="project-slots" aria-label="Clipcam projects">
-            {slots.map((project, index) =>
-              project ? (
+            {slots.map((project, index) => {
+              const slotLabel = `Slot ${String(index + 1).padStart(2, '0')}`
+              if (!project) {
+                return (
+                  <button
+                    key={`empty-${index}`}
+                    type="button"
+                    className="project-slot empty"
+                    disabled={busy}
+                    mix={on('click', openNewProject)}
+                  >
+                    <span className="slot-plus" aria-hidden="true">
+                      <IconPlus size={22} />
+                    </span>
+                    <strong>New project</strong>
+                    <small className="board-label">{slotLabel}</small>
+                  </button>
+                )
+              }
+              const change = projectChange(project)
+              return (
                 <article
                   key={project.id}
-                  className={
-                    project.posterThumb ? 'project-slot filled has-poster' : 'project-slot filled'
-                  }
+                  className={[
+                    'project-slot filled',
+                    project.posterThumb ? 'has-poster' : '',
+                    change ? 'is-changed' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
                 >
                   {project.posterThumb ? (
                     <BlobImage
@@ -432,19 +455,34 @@ export function HomePage(handle: Handle) {
                     />
                   ) : null}
                   <div className="slot-fade" aria-hidden="true" />
-                  <a className="slot-open" href={`/project/${project.id}`}>
-                    <span className="slot-number">Slot {index + 1}</span>
-                    <strong>{project.name}</strong>
-                    <small>
-                      {project.clipCount} clip{project.clipCount === 1 ? '' : 's'} ·{' '}
-                      {formatDuration(project.durationMs)}
-                      {project.sizeBytes > 0 ? (
-                        <>
-                          {' · '}
-                          <span className="slot-size">{formatBytes(project.sizeBytes)}</span>
-                        </>
+                  <a
+                    className="slot-open"
+                    href={`/project/${project.id}`}
+                    mix={on('click', () => markProjectSeen(project.id))}
+                  >
+                    <span className="slot-head">
+                      <span className="slot-number">{slotLabel}</span>
+                      {change ? (
+                        <span className="now-tag">{change === 'new' ? 'New' : 'Updated'}</span>
                       ) : null}
-                    </small>
+                    </span>
+                    <strong>{project.name}</strong>
+                    <span className="slot-segments">
+                      <span>
+                        <b>{project.clipCount}</b>
+                        <i>{project.clipCount === 1 ? 'Clip' : 'Clips'}</i>
+                      </span>
+                      <span>
+                        <b>{formatDuration(project.durationMs)}</b>
+                        <i>Length</i>
+                      </span>
+                      {project.sizeBytes > 0 ? (
+                        <span>
+                          <b className="slot-size">{formatBytes(project.sizeBytes)}</b>
+                          <i>Size</i>
+                        </span>
+                      ) : null}
+                    </span>
                   </a>
                   <button
                     type="button"
@@ -463,22 +501,8 @@ export function HomePage(handle: Handle) {
                     <IconMore />
                   </button>
                 </article>
-              ) : (
-                <button
-                  key={`empty-${index}`}
-                  type="button"
-                  className="project-slot empty"
-                  disabled={busy}
-                  mix={on('click', openNewProject)}
-                >
-                  <span className="slot-plus" aria-hidden="true">
-                    <IconPlus size={26} />
-                  </span>
-                  <strong>New project</strong>
-                  <small>{`Slot ${index + 1}`}</small>
-                </button>
-              ),
-            )}
+              )
+            })}
           </section>
 
           <p className="home-privacy">

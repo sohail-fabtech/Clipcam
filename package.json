@@ -1,8 +1,11 @@
 {
-  "name": "kody-video",
+  "name": "clipcam",
   "private": true,
   "version": "0.1.0",
   "license": "FSL-1.1-ALv2",
+  "engines": {
+    "node": ">=24.3.0"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,7 +15,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:smoke": "npm run build && node scripts/manual-smoke.mjs",
-    "lint": "tsc -b --pretty false"
+    "lint": "tsc -b --pretty false",
+    "icons": "node scripts/gen-icons.mjs"
   },
   "dependencies": {
     "@remix-run/ui": "0.12.1",
