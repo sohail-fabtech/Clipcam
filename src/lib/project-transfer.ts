@@ -1,4 +1,3 @@
-import { isWatermarkRemoved } from './entitlement'
 import {
   addClip,
   addProjectAudioTrack,
@@ -427,11 +426,7 @@ async function persistImportedProject(
   parsed: ParsedBackup,
   onProgress?: (doneClips: number, totalClips: number) => void,
 ): Promise<Project> {
-  const plus = await isWatermarkRemoved()
-  // Landscape projects are a Plus perk, like background music: restoring a
-  // Plus-made backup on a free device keeps the clips as a portrait project
-  // (the setting is skipped, never a creation failure).
-  const orientation = plus && parsed.orientation === 'landscape' ? 'landscape' : undefined
+  const orientation = parsed.orientation === 'landscape' ? 'landscape' : undefined
   const project = await createProject(parsed.projectName, { orientation })
   try {
     let done = 0
@@ -474,12 +469,9 @@ async function persistImportedProject(
       done += 1
       onProgress?.(done, parsed.clips.length)
     }
-    // Background music is a Plus perk: restoring a Plus-made backup on a
-    // free device keeps the clips and skips the playlist wholesale (checked
-    // up front — never a silent partial playlist). On entitled devices any
-    // track failure fails the import like a clip failure would, so the
+    // Any track failure fails the import like a clip failure would, so the
     // rollback below never leaves half the music behind.
-    if (parsed.audio && plus) {
+    if (parsed.audio) {
       for (const track of parsed.audio.tracks) {
         const record = await addProjectAudioTrack({
           projectId: project.id,

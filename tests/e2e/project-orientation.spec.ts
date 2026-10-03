@@ -3,7 +3,6 @@ import {
   openNewProject,
   recordClip,
   seedProject,
-  unlockPlus,
   waitForCameraReady,
 } from './helpers'
 
@@ -20,7 +19,6 @@ test.describe('project orientation', () => {
     page,
   }) => {
     const projectId = await seedProject(page, { clips: 2 })
-    await unlockPlus(page)
     await page.evaluate(async (id) => {
       const storage = await import('/src/lib/storage.ts')
       await storage.setProjectOrientation(id, 'landscape')
@@ -127,7 +125,6 @@ test.describe('project orientation', () => {
     // exported with the Go button — portrait fixture clips (320×568) must
     // come out 568×320 (the same cover-fit center crop the preview shows).
     const projectId = await seedProject(page, { clips: 1 })
-    await unlockPlus(page)
     await page.evaluate(async (id) => {
       const storage = await import('/src/lib/storage.ts')
       await storage.setProjectOrientation(id, 'landscape')

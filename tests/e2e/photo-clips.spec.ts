@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import { gotoHome, openSeededProject, unlockPlus, waitForCameraReady } from './helpers'
+import { gotoHome, openSeededProject, waitForCameraReady } from './helpers'
 
 /** Tiny mono 16-bit PCM WAV for music-bed regression coverage. */
 function makeWavFile(name: string, durationSec = 4) {
@@ -194,9 +194,8 @@ test.describe('photo clips on the timeline', () => {
     // Regression: startImage() used to call playMusic() before the <audio>
     // ref existed, so a film that opens on a photo stayed silent.
     const projectId = await seedPhotoProject(page, { durationMs: 5000 })
-    // Unlock before re-entering the project so the editor renders the
-    // unlocked Add music control (not the Plus upsell button).
-    await unlockPlus(page)
+    // Re-enter the project so the editor renders the
+    // Add music control.
     await page.goto(`/project/${projectId}`)
     await waitForCameraReady(page)
     await page.getByRole('button', { name: 'Open editor' }).click()
@@ -266,7 +265,7 @@ test.describe('photo clips on the timeline', () => {
         audioPeak: 0,
       })
       const clips = await storage.getClipsForProject(project.id)
-      const result = await exportProject(clips, { watermark: false })
+      const result = await exportProject(clips, {})
 
       // The exported audio track spans the whole film (photos contribute
       // silence), so its decoded length measures the output duration.

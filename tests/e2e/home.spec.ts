@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { gotoHome, openNewProject, recordClip, unlockPlus } from './helpers'
+import { gotoHome, openNewProject, recordClip } from './helpers'
 
 test.describe('home & app shell', () => {
   test('landscape home is a deliberate two-pane layout; portrait keeps the column', async ({
@@ -175,22 +175,8 @@ test.describe('home & app shell', () => {
     await expect(popover).toBeHidden()
   })
 
-  test('free plan locks slots 2-6 behind the Plus upsell', async ({ page }) => {
+  test('6 projects fit; the 7th is blocked', async ({ page }) => {
     await gotoHome(page)
-    await expect(page.locator('.project-slot.empty.locked')).toHaveCount(5)
-    await page.locator('.project-slot.empty.locked').first().click()
-    const upsell = page.getByRole('dialog', { name: 'Kody Video Plus' })
-    await expect(upsell).toBeVisible()
-    await expect(upsell).toContainText('The free plan includes 1 project')
-    await expect(upsell.getByRole('button', { name: /Get Plus/ })).toBeVisible()
-    await expect(upsell.getByRole('button', { name: /Already paid/ })).toBeVisible()
-    await upsell.getByRole('button', { name: 'Not now' }).click()
-    await expect(upsell).toBeHidden()
-  })
-
-  test('Plus unlocks 6 projects; the 7th is blocked', async ({ page }) => {
-    await gotoHome(page)
-    await unlockPlus(page)
     const outcome = await page.evaluate(async () => {
       const storage = await import('/src/lib/storage.ts')
       // Explicit names (even default-shaped ones): only projects still
@@ -208,7 +194,6 @@ test.describe('home & app shell', () => {
     expect(outcome).toContain('Project limit reached (6)')
     await page.reload()
     await expect(page.locator('.project-slot.filled')).toHaveCount(6)
-    await expect(page.locator('.project-slot.empty.locked')).toHaveCount(0)
   })
 
   test('storage banner appears at 80% and turns critical at 92%', async ({ browser }) => {
@@ -333,9 +318,6 @@ test.describe('home & app shell', () => {
     await expect(page.getByRole('heading', { name: 'Terms', exact: true })).toBeVisible()
     await page.goto('/receive')
     await expect(page.getByRole('heading', { name: 'Receive a project' })).toBeVisible()
-    await page.goto('/unlocked')
-    await expect(page.getByRole('heading', { name: 'Unlock Plus' })).toBeVisible()
-    await expect(page.getByLabel('Plus code')).toBeVisible()
   })
 })
 

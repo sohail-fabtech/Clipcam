@@ -14,14 +14,14 @@ import {
 } from './project-transfer'
 import {
   __resetDbForTests,
+  createProject,
   getClipsForProject,
   getProjectAudio,
   listProjects,
   ProjectLimitError,
   StorageQuotaExceededError,
 } from './storage'
-import { markWatermarkRemoved } from './entitlement'
-import type { ClipRecord, Project, ProjectAudioRecord } from './types'
+import { MAX_PROJECTS, type ClipRecord, type Project, type ProjectAudioRecord } from './types'
 
 function fakeProject(name = 'Road Trip'): Project {
   return { id: 'proj_x', name, createdAt: 1, updatedAt: 2, clipIds: ['clip_a', 'clip_b'] }
@@ -135,8 +135,7 @@ describe('project backup round trip', () => {
     expect(parsed.audio).toBeNull()
   })
 
-  it('round-trips the project orientation (Plus devices)', async () => {
-    await markWatermarkRemoved('cs_test_transfer')
+  it('round-trips the project orientation', async () => {
     const backup = serializeProject(
       { ...fakeProject('Wide'), orientation: 'landscape' },
       [fakeClip('clip_a', 'AAAA')],
@@ -156,20 +155,7 @@ describe('project backup round trip', () => {
     expect(parsed.orientation).toBe('portrait')
   })
 
-  it('imports a landscape backup on a free device as a portrait project', async () => {
-    const backup = serializeProject(
-      { ...fakeProject('Wide'), orientation: 'landscape' },
-      [fakeClip('clip_a', 'AAAA')],
-    )
-    const parsed = await parseProjectBackup(backup)
-    const project = await importProjectBackup(parsed)
-
-    expect(await getClipsForProject(project.id)).toHaveLength(1)
-    expect((await listProjects()).find((p) => p.id === project.id)?.orientation).toBeUndefined()
-  })
-
   it('round-trips the music playlist, fades, and per-clip volumes', async () => {
-    await markWatermarkRemoved('cs_test_transfer')
     const clips = [
       fakeClip('clip_a', 'AAAA', { clipVolume: 0.3, musicVolume: 0.8, audioPeak: 0.45 }),
       fakeClip('clip_b', 'BBBB'),
@@ -216,7 +202,6 @@ describe('project backup round trip', () => {
   })
 
   it('round-trips per-track playback settings (trim, level, fades)', async () => {
-    await markWatermarkRemoved('cs_test_transfer')
     const audio = fakeAudio(['SONGBYTES', 'MORESONG'])
     audio.tracks[0] = {
       ...audio.tracks[0],
@@ -252,15 +237,6 @@ describe('project backup round trip', () => {
     })
     expect(imported?.tracks[1].trimStartMs).toBeUndefined()
     expect(imported?.tracks[1].volume).toBeUndefined()
-  })
-
-  it('imports a music-carrying backup on a free device, skipping the playlist', async () => {
-    const backup = serializeProject(fakeProject('Scored'), [fakeClip('clip_a', 'AAAA')], fakeAudio())
-    const parsed = await parseProjectBackup(backup)
-    const project = await importProjectBackup(parsed)
-
-    expect((await getClipsForProject(project.id))).toHaveLength(1)
-    expect(await getProjectAudio(project.id)).toBeUndefined()
   })
 
   it('rejects a backup whose audio section is truncated', async () => {
@@ -400,7 +376,8 @@ describe('project backup round trip', () => {
     expect(await clips[0]!.blob.text()).toBe('MEDIA')
   })
 
-  it('serializes overlapping imports so the free-plan cap still holds', async () => {
+  it('serializes overlapping imports so the project cap still holds', async () => {
+    for (let i = 1; i < MAX_PROJECTS; i += 1) await createProject(`Existing ${i}`)
     const backup = serializeProject(fakeProject('One'), [fakeClip('clip_a', 'MEDIA')])
     const fileA = new File([backup], 'one.kodyvideo', { type: 'application/octet-stream' })
     const fileB = new File([backup], 'two.kodyvideo', { type: 'application/octet-stream' })
@@ -416,6 +393,6 @@ describe('project backup round trip', () => {
     if (rejected[0]?.status === 'rejected') {
       expect(rejected[0].reason).toBeInstanceOf(ProjectLimitError)
     }
-    expect(await listProjects()).toHaveLength(1)
+    expect(await listProjects()).toHaveLength(MAX_PROJECTS)
   })
 })
