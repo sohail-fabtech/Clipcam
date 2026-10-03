@@ -44,7 +44,7 @@ interface EditorClipPreviewProps {
    * position on the OUTPUT timeline decides which part of the music
    * playlist plays under it. */
   clips: ClipRecord[]
-  /** Background-music playlist (null when none / not unlocked). */
+  /** Background-music playlist (null when none). */
   audio: ProjectAudioRecord | null
   apiRef?: { current: EditorClipPreviewHandle | null }
   /** Timeline view: open the clip info sheet from the preview corner. */
