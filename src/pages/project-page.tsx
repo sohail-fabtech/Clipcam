@@ -227,11 +227,9 @@ export function ProjectPage(handle: Handle<ProjectPageProps>) {
 
   /**
    * The film's orientation this page renders for. Locked projects (any with
-   * clips) use the stored film. Unlocked Plus projects on phones follow
-   * how the device is held — rotating is the orientation picker. Free
-   * unlocked projects stay portrait: landscape films are Plus, so a
-   * sideways preview would not match the take they can actually lock.
-   * Desktop keeps the classic column for unlocked projects.
+   * clips) use the stored film. Unlocked projects on phones follow how the
+   * device is held — rotating is the orientation picker. Desktop keeps the
+   * classic column for unlocked projects.
    */
   const effectiveOrientation = (): ProjectOrientation => {
     const project = data?.project

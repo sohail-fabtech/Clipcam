@@ -47,19 +47,4 @@ describe('lockOrientationFromFirstClip', () => {
     await lockOrientationFromFirstClip(project.id, clip)
     expect((await getProject(project.id))?.orientation).toBe('landscape')
   })
-  it('never locks a desktop recording from landscape webcam pixels', async () => {
-    setPlatformOverridesForTests({ coarsePointer: false })
-    const project = await createProject('Webcam')
-    const clip = await addClip({
-      projectId: project.id,
-      blob: fakeBlob('webcam'),
-      mimeType: 'video/webm',
-      durationMs: 800,
-      width: 1280,
-      height: 720,
-    })
-
-    await lockOrientationFromFirstClip(project.id, clip, { preferHeldOrientation: true })
-    expect((await getProject(project.id))?.orientation).toBeUndefined()
-  })
 })

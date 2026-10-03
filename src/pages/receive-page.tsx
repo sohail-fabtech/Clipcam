@@ -40,7 +40,7 @@ function phaseCopy(phase: SyncPhase, error: string | null, hasCode: boolean): st
   }
 }
 
-/** Free: accept a Plus send and import it as a new project. */
+/** Accept a Send to device and import it as a new project. */
 export function ReceivePage(handle: Handle<ReceivePageProps>) {
   // Normalize once so mount can paint the right state without a sync
   // handle.update() (ignored during setup; the initial render covers it).
