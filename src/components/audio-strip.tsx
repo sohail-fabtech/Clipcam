@@ -20,7 +20,7 @@ import {
   type ProjectAudioRecord,
   type ProjectId,
 } from '../lib/types'
-import { IconClose, IconLock, IconMusic, IconPlus } from './icons'
+import { IconClose, IconMusic, IconPlus } from './icons'
 
 interface AudioStripProps {
   /** Resolves the persisted project id (creates it from a lazy "new" shell). */
@@ -32,10 +32,6 @@ interface AudioStripProps {
   /** Total film length — drives the "music ends early" hint. */
   projectDurationMs: number
   disabled: boolean
-  /** Background music is a Kody Video Plus perk. */
-  plus: boolean
-  /** Open the Plus upsell sheet (owned by the page, like restore). */
-  onUpsell: () => void
   /** Open a track's detail view (trim, volume, fades) — owned by the editor
    * screen, like the clip trim view. */
   onEditTrack: (trackId: string) => void
@@ -209,28 +205,6 @@ export function AudioStrip(handle: Handle<AudioStripProps>) {
     ) : null
 
     if (!audio) {
-      // Free plan: the button stays visible (discoverable) but opens the
-      // Plus upsell instead of the file picker.
-      if (!props.plus) {
-        return (
-          <div key="audio-strip-locked" className="audio-strip">
-            <button
-              type="button"
-              className="btn btn-ghost audio-add audio-add-locked"
-              disabled={disabled}
-              aria-label="Add background music (Kody Video Plus)"
-              mix={on('click', () => props.onUpsell())}
-            >
-              <IconMusic size={18} />
-              Add music
-              <span className="audio-plus-lock" aria-hidden="true">
-                <IconLock size={13} />
-              </span>
-            </button>
-            {clipSoundRow}
-          </div>
-        )
-      }
       return (
         <div key="audio-strip-empty" className="audio-strip">
           {fileInput}
