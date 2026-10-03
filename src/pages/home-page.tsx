@@ -33,11 +33,6 @@ import { clearExportCache } from '../lib/export/export-cache'
 import { reportError } from '../lib/error-reporting'
 import { canPromptInstall, promptInstall, subscribeInstallPrompt } from '../lib/install-prompt'
 import { dismissIosInstallHint, shouldShowIosInstallHint } from '../lib/install-hint'
-import {
-  dismissShowcaseBanner,
-  isShowcaseBannerDismissed,
-  showcaseForHostname,
-} from '../lib/showcase'
 import { navigate } from '../router'
 import { formatBytes, formatStoragePercent, storageSeverity } from '../lib/storage-space'
 import {
@@ -50,11 +45,6 @@ import {
 
 /** Android share targets get flaky well below this; bigger backups download. */
 const SHARE_BACKUP_LIMIT_BYTES = 50 * 1024 * 1024
-
-/** The pre-custom-domain deployment; nudge people to migrate to kody.video. */
-function isLegacyOrigin(): boolean {
-  return location.hostname === 'kody-video.pages.dev'
-}
 
 /**
  * Last loaded home data, kept across mounts: navigating back to home renders
@@ -74,8 +64,6 @@ export function HomePage(handle: Handle) {
   let showInstallHint = shouldShowIosInstallHint()
   let sending: ProjectSummary | null = null
   let installPopoverOpen = false
-  const showcase = showcaseForHostname(location.hostname)
-  let showShowcaseBanner = showcase !== null && !isShowcaseBannerDismissed()
   // Prefetched when the options sheet opens so the Save-backup tap keeps its
   // user activation (Web Share needs it; an IndexedDB read can outlive it).
   let prefetchedClips: {
@@ -266,7 +254,7 @@ export function HomePage(handle: Handle) {
             <div
               className="install-popover"
               role="dialog"
-              aria-label="Install Kody Video"
+              aria-label="Install Clipcam"
               mix={popover.surface({
                 open: installPopoverOpen,
                 // The anchor's own click handler owns toggling; letting the
@@ -279,7 +267,7 @@ export function HomePage(handle: Handle) {
                 },
               })}
             >
-              <strong>Install Kody Video</strong>
+              <strong>Install Clipcam</strong>
               <p>
                 Full screen, works offline, and your clips are safer from browser storage cleanup.
               </p>
@@ -310,7 +298,7 @@ export function HomePage(handle: Handle) {
         <a
           className="btn-icon home-corner home-corner-right"
           href="/about"
-          aria-label="About Kody Video"
+          aria-label="About Clipcam"
         >
           <IconInfo />
         </a>
@@ -338,51 +326,11 @@ export function HomePage(handle: Handle) {
               }
             />
           </div>
-          <h1 className="brand">
-            Kody <span>Video</span>
-          </h1>
+          <h1 className="brand">Clipcam</h1>
           <p className="lede">Hold to record. Tap Go to share.</p>
         </div>
 
         <div className="home-main">
-          {isLegacyOrigin() ? (
-            <div className="home-migrate">
-              <strong>Kody Video has moved to <a href="https://kody.video">kody.video</a>.</strong>{' '}
-              Projects live in this browser per-site, so use ⋯ → Save backup here, then import them
-              over there (About → Import a backup). This address keeps working but won&rsquo;t get
-              updates.
-            </div>
-          ) : null}
-
-          {showcase && showShowcaseBanner ? (
-            <div className="home-migrate home-showcase" role="note">
-              <span>
-                <strong>
-                  This is the {showcase.edition} showcase — the real app lives at{' '}
-                  <a href="https://kody.video">kody.video</a>.
-                </strong>{' '}
-                Projects stay in this browser per-site, so record over there. Curious how this
-                edition came to be? Read the agent&rsquo;s analysis in{' '}
-                <a href={showcase.prUrl} target="_blank" rel="noreferrer noopener">
-                  PR #{showcase.prNumber}
-                </a>
-                .
-              </span>
-              <button
-                type="button"
-                className="install-hint-dismiss"
-                aria-label="Dismiss showcase note"
-                mix={on('click', () => {
-                  dismissShowcaseBanner()
-                  showShowcaseBanner = false
-                  void handle.update()
-                })}
-              >
-                <IconClose size={16} />
-              </button>
-            </div>
-          ) : null}
-
           {error ? <div className="error-banner">{error}</div> : null}
           {notice ? <p className="home-notice">{notice}</p> : null}
 
@@ -433,7 +381,7 @@ export function HomePage(handle: Handle) {
                 <IconShareIos size={18} />
               </span>
               <span>
-                Install Kody Video: tap <strong>Share</strong>, then{' '}
+                Install Clipcam: tap <strong>Share</strong>, then{' '}
                 <strong>Add to Home Screen</strong> — full screen, and your clips are safer from
                 Safari&rsquo;s storage cleanup.
               </span>
@@ -465,7 +413,7 @@ export function HomePage(handle: Handle) {
             />
           ) : null}
 
-          <section className="project-slots" aria-label="Kody Video projects">
+          <section className="project-slots" aria-label="Clipcam projects">
             {slots.map((project, index) =>
               project ? (
                 <article

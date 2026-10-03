@@ -1,7 +1,7 @@
 /**
  * Serve markdown when an agent asks for it (Accept: text/markdown).
- * Cloudflare's zone-level Markdown for Agents converter is Pro+ only;
- * kody.video is on the Free plan, so this Function is the equivalent.
+ * Cloudflare's zone-level Markdown for Agents converter is Pro+ only, so
+ * this Function is the equivalent on any plan.
  */
 import { agentMarkdownResponse } from './lib/agent-markdown'
 

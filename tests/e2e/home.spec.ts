@@ -150,7 +150,7 @@ test.describe('home & app shell', () => {
     // Dismissal persists across SPA navigation (cached home data) …
     await card.getByRole('button', { name: 'Dismiss tour' }).click()
     await expect(card).toBeHidden()
-    await page.getByRole('link', { name: 'About Kody Video' }).click()
+    await page.getByRole('link', { name: 'About Clipcam' }).click()
     await expect(page.locator('.about-screen')).toBeVisible()
     await page.goBack()
     await expect(page.locator('.project-slots')).toBeVisible()
@@ -251,7 +251,7 @@ test.describe('home & app shell', () => {
     )
     await expect(meta('og:image', 'property')).toHaveAttribute(
       'content',
-      'https://kody.video/og-image.png',
+      '/og-image.png',
     )
     await expect(meta('twitter:card')).toHaveAttribute('content', 'summary_large_image')
   })
@@ -267,7 +267,7 @@ test.describe('home & app shell', () => {
 
   test('corner buttons: About always, Install once the browser offers it', async ({ page }) => {
     await gotoHome(page)
-    await expect(page.getByRole('link', { name: 'About Kody Video' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'About Clipcam' })).toBeVisible()
     // Headless Chromium never fires beforeinstallprompt on its own.
     await expect(page.getByRole('button', { name: 'Install app' })).toHaveCount(0)
     await page.evaluate(() => {
@@ -284,7 +284,7 @@ test.describe('home & app shell', () => {
       window.dispatchEvent(new Event('beforeinstallprompt'))
     })
     await page.getByRole('button', { name: 'Install app' }).click()
-    const explainer = page.getByRole('dialog', { name: 'Install Kody Video' })
+    const explainer = page.getByRole('dialog', { name: 'Install Clipcam' })
     await expect(explainer).toBeVisible()
     await expect(explainer).toContainText('works offline')
 
@@ -309,9 +309,9 @@ test.describe('home & app shell', () => {
 
   test('about, privacy, and terms pages render', async ({ page }) => {
     await gotoHome(page)
-    await page.getByRole('link', { name: 'About Kody Video' }).click()
+    await page.getByRole('link', { name: 'About Clipcam' }).click()
     await page.waitForURL(/\/about/)
-    await expect(page.locator('body')).toContainText('Kody Video')
+    await expect(page.locator('body')).toContainText('Clipcam')
     await page.goto('/privacy')
     await expect(page.getByRole('heading', { name: 'Privacy', exact: true })).toBeVisible()
     await page.goto('/terms')

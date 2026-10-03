@@ -9,7 +9,7 @@
 # (new worker + /version.json), never by blocking launch on the edge.
 /
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
-  Link: </sitemap.xml>; rel="describedby"; type="application/xml", </about>; rel="about", </auth.md>; rel="describedby"; type="text/markdown"
+  Link: </about>; rel="about", </auth.md>; rel="describedby"; type="text/markdown"
 
 /index.html
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800

@@ -74,7 +74,7 @@ describe('storage layer', () => {
     await __resetDbForTests()
   })
 
-  it('uses Kody Video storage settings', async () => {
+  it('uses the app storage settings', async () => {
     expect(DB_NAME).toBe('kody-video')
     expect((await getSettings()).onboardingDismissed).toBe(false)
     expect((await getSettings()).tourCardDismissed).toBeUndefined()

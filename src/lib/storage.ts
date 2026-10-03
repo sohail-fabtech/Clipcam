@@ -209,7 +209,7 @@ export class IndexedDbUnavailableError extends Error {
   override readonly name = 'IndexedDbUnavailableError'
 
   constructor(
-    message = 'This browser can’t open on-device storage right now. Free some disk space, close other kody.video tabs, or restart the browser — then reload.',
+    message = 'This browser can’t open on-device storage right now. Free some disk space, close other Clipcam tabs, or restart the browser — then reload.',
   ) {
     super(message)
   }

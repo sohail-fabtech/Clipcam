@@ -137,7 +137,7 @@ function taggedDomExceptionAbort(tags: FilterableSentryEvent['tags']): boolean {
 }
 
 /**
- * Intentional Plus send/receive cancel (KODY-VIDEO-13). The live event is an
+ * Intentional send/receive cancel (KODY-VIDEO-13). The live event is an
  * unhandled rejection wrapped as Error `AbortError: Send cancelled.` with tag
  * DOMException.code=20, empty stack, and no `step` (not from reportError).
  * Other AbortErrors still report — a real bug can abort.

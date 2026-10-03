@@ -12,7 +12,7 @@ describe('qrSvgMarkup', () => {
 
 describe('qrSvgDataUrl', () => {
   it('is a usable image src', () => {
-    const src = qrSvgDataUrl('https://kody.video/unlocked/ABC234')
+    const src = qrSvgDataUrl('https://clipcam.app/receive/ABC234')
     expect(src.startsWith('data:image/svg+xml;charset=utf-8,')).toBe(true)
     expect(decodeURIComponent(src.slice('data:image/svg+xml;charset=utf-8,'.length))).toContain(
       '<svg',

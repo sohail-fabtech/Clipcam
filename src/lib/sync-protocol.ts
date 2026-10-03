@@ -81,7 +81,7 @@ export function encodeSyncHeader(header: SyncBackupHeader): string {
 
 export function decodeSyncHeader(message: string): SyncBackupHeader {
   if (!message.startsWith(SYNC_HEADER_PREFIX)) {
-    throw new Error('This device sent something that is not a Kody Video project.')
+    throw new Error('This device sent something that is not a Clipcam project.')
   }
   let parsed: unknown
   try {

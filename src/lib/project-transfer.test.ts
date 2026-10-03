@@ -324,22 +324,24 @@ describe('project backup round trip', () => {
   })
 
   it('builds a sensible filename', () => {
-    expect(projectBackupFilename('Röad Trip!!')).toBe('r-ad-trip.kodyvideo')
-    expect(projectBackupFilename('   ')).toBe('project.kodyvideo')
+    expect(projectBackupFilename('Röad Trip!!')).toBe('r-ad-trip.clipcam')
+    expect(projectBackupFilename('   ')).toBe('project.clipcam')
   })
 
-  it('recognizes dropped .kodyvideo files by extension', () => {
+  it('recognizes dropped .clipcam and legacy .kodyvideo files by extension', () => {
+    expect(isKodyVideoBackupFile({ name: 'road-trip.clipcam' })).toBe(true)
+    expect(isKodyVideoBackupFile({ name: 'Road-Trip.CLIPCAM' })).toBe(true)
     expect(isKodyVideoBackupFile({ name: 'road-trip.kodyvideo' })).toBe(true)
     expect(isKodyVideoBackupFile({ name: 'Road-Trip.KODYVIDEO' })).toBe(true)
     expect(isKodyVideoBackupFile({ name: 'clip.mp4' })).toBe(false)
     expect(isKodyVideoBackupFile({ name: 'notes.kodyvideo.bak' })).toBe(false)
     expect(
       kodyVideoBackupFilesFromList([
-        new File(['a'], 'trip.kodyvideo'),
+        new File(['a'], 'trip.clipcam'),
         new File(['b'], 'clip.mp4', { type: 'video/mp4' }),
         new File(['c'], 'Second.KodyVideo'),
       ]).map((file) => file.name),
-    ).toEqual(['trip.kodyvideo', 'Second.KodyVideo'])
+    ).toEqual(['trip.clipcam', 'Second.KodyVideo'])
     expect(kodyVideoBackupFilesFromList(null)).toEqual([])
     expect(dataTransferHasFiles({ types: ['Files'] } as unknown as DataTransfer)).toBe(true)
     expect(dataTransferHasFiles({ types: ['text/uri-list'] } as unknown as DataTransfer)).toBe(

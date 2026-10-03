@@ -1,5 +1,5 @@
 /**
- * Manual UX smoke for Kody Video (no real camera required).
+ * Manual UX smoke for Clipcam (no real camera required).
  * Boots vite preview, then walks the core OK Video flow with a fake camera:
  * create project → hold-to-record clips → editor/trim → export → playback.
  */
@@ -79,7 +79,7 @@ try {
   const title = await page.title()
   // Boot hero + React home spacer both render h1.brand on mobile viewports.
   const brand = await page.locator('#boot-hero h1.brand').innerText()
-  if (title.includes('Kody') && brand.toLowerCase().includes('kody')) {
+  if (title.includes('Clipcam') && brand.toLowerCase().includes('clipcam')) {
     pass('home branding', `${title} / ${brand.replace(/\n/g, ' ')}`)
   } else {
     fail('home branding', `${title} / ${brand}`)
@@ -248,60 +248,17 @@ try {
   if (await saveBtn.count()) pass('export offers Save')
   else fail('export offers Save')
 
-  const upsell = exportDialog.getByRole('button', { name: /get plus — \$0\.99/i })
-  if (await upsell.count()) pass('watermark upsell shown while locked')
-  else fail('watermark upsell shown while locked')
-  await exportDialog.getByRole('button', { name: /done|close/i }).first().click()
-
-  // --- Purchase verification flow (mocked endpoint) + unlocked state ---
-  await page.route('**/api/verify-purchase*', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ unlocked: true }),
-    }),
-  )
-  await page.goto(`${BASE}/unlocked?session_id=cs_live_smoketest123`, {
-    waitUntil: 'networkidle',
-  })
-  const celebrated = await page
-    .waitForSelector('text=/kody video plus unlocked/i', { timeout: 5000 })
-    .then(() => true)
-    .catch(() => false)
-  if (celebrated) pass('unlock page verifies and celebrates')
-  else fail('unlock page verifies and celebrates')
-  await shot(page, '10-unlocked')
-
-  await page.getByRole('link', { name: /start creating/i }).click()
-  await page.waitForURL(BASE + '/', { timeout: 5000 }).catch(() => undefined)
-  await page.locator('.project-slot.filled .slot-open').first().click()
-  await page.waitForURL(/\/project\//, { timeout: 5000 })
-  await page.getByRole('button', { name: /^go$/i }).first().click()
-  const unlockedExport = await page
-    .waitForFunction(
-      () => {
-        const dialog = document.querySelector('[aria-label="Share project"]')
-        return dialog && /video is ready/i.test(dialog.textContent || '')
-      },
-      { timeout: 45000 },
-    )
-    .then(() => true)
-    .catch(() => false)
-  const upsellGone =
-    unlockedExport &&
-    (await page.getByRole('button', { name: /get plus — \$0\.99/i }).count()) === 0
-  if (upsellGone) pass('purchase removes the watermark upsell')
-  else fail('purchase removes the watermark upsell', `exported=${unlockedExport}`)
-  const unlockedDialog = page.getByRole('dialog', { name: /share project/i })
-  const locationExportToggle = unlockedDialog.getByRole('checkbox', {
+  const upsell = await exportDialog.getByText(/plus|\$0\.99|watermark/i).count()
+  if (upsell === 0) pass('export sheet has no paywall or watermark upsell')
+  else fail('export sheet has no paywall or watermark upsell')
+  const locationExportToggle = exportDialog.getByRole('checkbox', {
     name: /include clip locations/i,
   })
   const locationExportSafe =
     (await locationExportToggle.count()) === 1 && !(await locationExportToggle.isChecked())
-  if (locationExportSafe) pass('Plus location export toggle defaults off')
-  else fail('Plus location export toggle defaults off')
-  await unlockedDialog.getByRole('button', { name: /done|close/i }).first().click()
-  await page.unroute('**/api/verify-purchase*')
+  if (locationExportSafe) pass('location export toggle defaults off')
+  else fail('location export toggle defaults off')
+  await exportDialog.getByRole('button', { name: /done|close/i }).first().click()
 
   // --- Playback preview overlay ---
   await page.getByRole('button', { name: /play project preview/i }).click()
@@ -326,15 +283,13 @@ try {
   // --- About page: open-source + OK Video credits ---
   await page.goto(BASE, { waitUntil: 'networkidle' })
   // Corner icon link — accessible name is the aria-label, not visible "About" text.
-  await page.getByRole('link', { name: /about kody video/i }).click()
+  await page.getByRole('link', { name: /about clipcam/i }).click()
   await page.waitForURL(/\/about/, { timeout: 5000 })
   await page.waitForSelector('.about-section', { timeout: 5000 }).catch(() => undefined)
-  const repoLink = await page
-    .locator('a[href="https://github.com/kentcdodds/kody-video"]')
-    .count()
+  const repoLink = await page.locator('a[href="https://me.jscrate.dev"]').count()
   const okVideoLink = await page.locator('a[href="https://okvideo.app"]').count()
-  if (repoLink > 0 && okVideoLink > 0) pass('about page links repo and OK Video')
-  else fail('about page links repo and OK Video', `repo=${repoLink} okvideo=${okVideoLink}`)
+  if (repoLink > 0 && okVideoLink > 0) pass('about page links author and OK Video')
+  else fail('about page links author and OK Video', `author=${repoLink} okvideo=${okVideoLink}`)
   await shot(page, '11-about')
 
   // --- Legal pages ---
