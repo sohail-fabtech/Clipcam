@@ -35,6 +35,7 @@ import { runWhenCaptureIdle } from './capture-activity'
 import { isOrientationSwap, sizeMatchingHold } from './clip-fit'
 import { probeVideoElementSize, probeVideoFileSize } from './clip-media'
 import { lockOrientationFromFirstClip } from './orientation-lock'
+import { markProjectSeen } from './seen-projects'
 import { heldDeviceOrientation } from './platform'
 import { probeAudioFile } from './audio-import'
 import { estimateExportCacheBytes } from './export/export-cache'
@@ -214,6 +215,7 @@ export async function loadProjectPage(projectId: ProjectId): Promise<ProjectLoad
       }
     }
     await setLastOpenedProjectId(projectId)
+    markProjectSeen(projectId)
     // Return stored clips immediately so the timeline can paint. Thumb and
     // audio-peak backfill runs after first paint (hydrateProjectClips) —
     // waiting here is what made "Clip added" land before the tile appeared.

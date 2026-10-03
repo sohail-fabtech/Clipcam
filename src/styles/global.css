@@ -368,15 +368,6 @@ a {
   }
 }
 
-.eyebrow {
-  margin: 0 0 8px;
-  color: var(--ink-muted);
-  font-size: 0.85rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-weight: 600;
-}
-
 .muted {
   color: var(--ink-muted);
 }

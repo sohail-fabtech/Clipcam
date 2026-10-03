@@ -9,9 +9,9 @@
     />
     <!-- Default first: older iOS ignores media on theme-color and otherwise
          falls back to white chrome behind a hung splash. -->
-    <meta name="theme-color" content="#2F3E46" />
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#2F3E46" />
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#EEF5F1" />
+    <meta name="theme-color" content="#0B0D10" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0B0D10" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#E6E8EB" />
     <!-- iOS home-screen apps only draw under the status bar when asked:
          black-translucent makes the web view truly full screen (the page
          background paints behind the clock instead of an opaque system
@@ -60,8 +60,8 @@
     <link
       rel="preload"
       as="image"
-      href="/art/kody-holding-camera-192.webp"
-      type="image/webp"
+      href="/logo.svg"
+      type="image/svg+xml"
       fetchpriority="high"
       media="not (display-mode: standalone)"
     />
@@ -71,30 +71,21 @@
     <style>
       :root {
         color-scheme: dark;
-        --bg-deep: #172126;
-        --bg: #2f3e46;
-        --bg-bottom: #10171a;
-        --ink: #f3f5f4;
-        --ink-muted: #b0b8bc;
-        --accent: #44d7a8;
-        --glow-accent: rgba(68, 215, 168, 0.2);
-        --glow-mist: rgba(176, 184, 188, 0.18);
-        --font-display: 'Fraunces', Georgia, serif;
-        --font-body: 'DM Sans', 'Segoe UI', sans-serif;
+        --bg: #0f1215;
+        --ink: #f2f3f5;
+        --ink-muted: #9aa0a7;
+        --font-display: 'Barlow Condensed', 'Arial Narrow', sans-serif-condensed, sans-serif;
+        --font-mono: 'Martian Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+        --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
         --safe-top: env(safe-area-inset-top, 0px);
         --safe-bottom: env(safe-area-inset-bottom, 0px);
       }
       @media (prefers-color-scheme: light) {
         :root {
           color-scheme: light;
-          --bg-deep: #dfeae4;
-          --bg: #eef5f1;
-          --bg-bottom: #cfdcd5;
-          --ink: #1a2824;
-          --ink-muted: #5a6d66;
-          --accent: #1f8a68;
-          --glow-accent: rgba(31, 138, 104, 0.18);
-          --glow-mist: rgba(95, 133, 117, 0.16);
+          --bg: #e6e8eb;
+          --ink: #0b0d10;
+          --ink-muted: #565c63;
         }
       }
       /* Must match global.css from first paint — otherwise the desktop
@@ -109,8 +100,8 @@
            centered #root when the SPA paints taller content. */
         scrollbar-gutter: stable;
         /* Solid color first so a standalone launch never shows the UA
-           default white page while the gradient/image assets settle. */
-        background-color: #2f3e46;
+           default white page while assets settle. */
+        background-color: #0f1215;
       }
       html,
       body,
@@ -126,20 +117,14 @@
       body {
         font-family: var(--font-body);
         color: var(--ink);
-        background:
-          radial-gradient(120% 80% at 10% -10%, var(--glow-accent), transparent 55%),
-          radial-gradient(90% 70% at 100% 0%, var(--glow-mist), transparent 50%),
-          linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 58%, var(--bg-bottom) 100%);
-        /* After the shorthand so a missing/hung gradient cannot fall through
-           to the UA white page (iOS standalone splash). */
-        background-color: #2f3e46;
+        background: var(--bg);
         -webkit-font-smoothing: antialiased;
         overflow: hidden;
       }
       @media (prefers-color-scheme: light) {
         html,
         body {
-          background-color: #eef5f1;
+          background-color: #e6e8eb;
         }
       }
       #root {
@@ -168,26 +153,40 @@
         width: 96px;
         height: 96px;
         margin: 0 0 4px;
-        border-radius: 24px;
-        background: rgba(243, 245, 244, 0.06);
+        border-radius: 22%;
         display: block;
       }
       #boot-hero .brand {
         font-family: var(--font-display);
         font-weight: 700;
-        letter-spacing: -0.03em;
-        font-size: clamp(1.65rem, 7vw, 2.1rem);
-        line-height: 0.95;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        font-size: clamp(2.1rem, 9vw, 2.6rem);
+        line-height: 0.9;
         margin: 0;
       }
-      #boot-hero .brand span {
-        color: var(--accent);
-      }
       #boot-hero .lede {
-        margin: 4px 0 0;
+        margin: 6px 0 0;
         color: var(--ink-muted);
-        font-size: 0.86rem;
+        font-family: var(--font-mono);
+        font-stretch: 78%;
+        font-size: 0.66rem;
+        font-weight: 500;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
         line-height: 1.3;
+      }
+      @media (max-height: 720px) {
+        #boot-hero .brand-hero-art {
+          width: 72px;
+          height: 72px;
+        }
+        #boot-hero .brand {
+          font-size: 1.9rem;
+        }
+        #boot-hero .lede {
+          font-size: 0.6rem;
+        }
       }
       /* Hide the HTML boot hero only once a route has painted real chrome.
          data-route=app used to flip at navigation time and left a blank
@@ -253,16 +252,16 @@
           /* Must match global.css: without this the base min-height: 100%
              wins and the frame's bottom edge falls below the fold. */
           min-height: 0;
-          border-radius: 28px;
+          border-radius: 14px;
           /* Match full stylesheet: reserve border box so 1px border + shadow
              cannot reflow the frame after CSS arrives. */
-          border: 1px solid rgba(243, 245, 244, 0.16);
+          border: 1px solid rgba(242, 243, 245, 0.14);
           overflow: hidden;
         }
       }
       @media (min-width: 720px) and (pointer: fine) and (prefers-color-scheme: light) {
         #root {
-          border-color: rgba(26, 40, 36, 0.12);
+          border-color: rgba(11, 13, 16, 0.14);
         }
       }
       #app {
@@ -302,13 +301,13 @@
           class="brand-hero-art"
           width="96"
           height="96"
-          src="/art/kody-holding-camera-192.webp"
+          src="/logo.svg"
           alt=""
           decoding="sync"
           fetchpriority="high"
         />
-        <h1 class="brand">Kody <span>Video</span></h1>
-        <p class="lede">Hold to record. Tap Go to share.</p>
+        <h1 class="brand">Clipcam</h1>
+        <p class="lede">Hold to record · Tap Go to share</p>
       </header>
       <!-- Single main landmark for screen readers (and Lighthouse a11y). -->
       <main id="app"></main>

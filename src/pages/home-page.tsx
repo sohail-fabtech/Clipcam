@@ -33,7 +33,7 @@ import { clearExportCache } from '../lib/export/export-cache'
 import { reportError } from '../lib/error-reporting'
 import { canPromptInstall, promptInstall, subscribeInstallPrompt } from '../lib/install-prompt'
 import { dismissIosInstallHint, shouldShowIosInstallHint } from '../lib/install-hint'
-import { markProjectSeen, projectChange } from '../lib/seen-projects'
+import { projectChange } from '../lib/seen-projects'
 import { navigate } from '../router'
 import { formatBytes, formatStoragePercent, storageSeverity } from '../lib/storage-space'
 import {
@@ -455,11 +455,7 @@ export function HomePage(handle: Handle) {
                     />
                   ) : null}
                   <div className="slot-fade" aria-hidden="true" />
-                  <a
-                    className="slot-open"
-                    href={`/project/${project.id}`}
-                    mix={on('click', () => markProjectSeen(project.id))}
-                  >
+                  <a className="slot-open" href={`/project/${project.id}`}>
                     <span className="slot-head">
                       <span className="slot-number">{slotLabel}</span>
                       {change ? (

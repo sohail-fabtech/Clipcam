@@ -1,4 +1,4 @@
-/* Home — six OK Video-style project slots. */
+/* Home — six project slots, each printed as a pass on the board. */
 
 .home-screen {
   gap: 0;
@@ -31,7 +31,7 @@
   padding: 14px 16px;
   width: min(272px, calc(100vw - 24px));
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: var(--radius);
   background: var(--panel-bg);
   color: var(--ink);
   box-shadow: var(--shadow);
@@ -40,7 +40,9 @@
 .install-popover strong {
   display: block;
   font-family: var(--font-display);
-  font-size: 1.05rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  text-transform: uppercase;
 }
 
 .install-popover p {
@@ -130,11 +132,11 @@
   }
 
   .home-screen .brand {
-    font-size: clamp(1.8rem, 3.2vw, 2.4rem);
+    font-size: clamp(2.4rem, 4vw, 3.2rem);
   }
 
   .home-screen .lede {
-    font-size: 0.92rem;
+    font-size: 0.72rem;
   }
 
   .home-main {
@@ -168,16 +170,16 @@
 .brand-hero-art {
   width: 96px;
   height: 96px;
-  border-radius: 24px;
-  background: rgba(243, 245, 244, 0.06);
+  border-radius: 22%;
 }
 
 .home-screen .brand {
   font-family: var(--font-display);
   font-weight: 700;
-  letter-spacing: -0.03em;
-  font-size: clamp(1.65rem, 7vw, 2.1rem);
-  line-height: 0.95;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  font-size: clamp(2.1rem, 9vw, 2.6rem);
+  line-height: 0.9;
   margin: 0;
 }
 
@@ -186,9 +188,14 @@
 }
 
 .home-screen .lede {
-  margin: 4px 0 0;
+  margin: 6px 0 0;
   color: var(--ink-muted);
-  font-size: 0.86rem;
+  font-family: var(--font-mono);
+  font-stretch: 78%;
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   line-height: 1.3;
   max-width: 100%;
   white-space: nowrap;
@@ -213,14 +220,12 @@
 .project-slot {
   position: relative;
   min-height: var(--home-slot-min-h);
-  border-radius: 20px;
+  border-radius: var(--radius);
   border: 1px solid var(--line);
-  background:
-    linear-gradient(160deg, color-mix(in srgb, var(--bg-soft) 34%, transparent), var(--bg-elevated)),
-    var(--bg-elevated);
-  box-shadow: var(--shadow);
+  background: var(--bg-elevated);
   overflow: hidden;
-  transition: transform 180ms ease, border-color 180ms ease, opacity 180ms ease;
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), border-color 180ms ease,
+    opacity 180ms ease;
 }
 
 .project-slot:active {
@@ -233,8 +238,13 @@
 }
 
 .project-slot.has-poster {
-  border-color: color-mix(in srgb, var(--ink) 22%, transparent);
   background: var(--bg-bottom);
+}
+
+/* The held change: lit until the project is opened again. */
+.project-slot.is-changed {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
 
 .slot-poster {
@@ -247,17 +257,14 @@
   pointer-events: none;
 }
 
+/* Scrim under the printed pass data: legibility over any poster. */
 .slot-fade {
   position: absolute;
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  background: linear-gradient(
-    180deg,
-    transparent 28%,
-    color-mix(in srgb, var(--bg-bottom) 72%, transparent) 68%,
-    color-mix(in srgb, var(--bg-bottom) 92%, transparent) 100%
-  );
+  background: linear-gradient(180deg, rgba(11, 13, 16, 0.55) 0%, transparent 34%,
+      transparent 42%, rgba(11, 13, 16, 0.9) 100%);
   opacity: 0;
 }
 
@@ -270,15 +277,18 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   padding: 12px 10px;
   text-align: center;
   color: var(--ink);
-  border-style: dashed;
-  border-width: 1.5px;
-  background:
-    radial-gradient(80% 70% at 50% 20%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%),
-    color-mix(in srgb, var(--ink) 5%, transparent);
+  border: 1.5px dashed var(--line-strong);
+  background: transparent;
+}
+
+@media (hover: hover) {
+  .project-slot.empty:hover:not(:disabled) {
+    border-color: var(--ink);
+  }
 }
 
 .project-slot.empty:disabled {
@@ -288,14 +298,13 @@
 .slot-plus {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  margin-bottom: 2px;
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  margin-bottom: 4px;
   line-height: 0;
-  color: var(--ink-strong);
+  color: var(--accent-ink);
   background: var(--accent);
-  box-shadow: 0 8px 18px var(--accent-soft);
 }
 
 .slot-open {
@@ -304,73 +313,137 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
-  gap: 3px;
-  padding: 12px;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 10px;
   min-height: var(--tap);
 }
 
+.slot-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  /* Clear the ⋯ options button in the corner. */
+  padding-right: 40px;
+  min-height: 24px;
+}
+
 .slot-number {
-  color: var(--accent-text);
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-stretch: 78%;
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-}
-
-.project-slot.has-poster .slot-number,
-.project-slot.has-poster strong,
-.project-slot.has-poster small {
-  color: #fff;
-  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45);
-}
-
-.project-slot.has-poster .slot-number {
-  color: rgba(255, 255, 255, 0.85);
 }
 
 .project-slot strong {
   display: block;
+  margin-top: auto;
   font-family: var(--font-display);
-  font-size: 1.05rem;
-  /* overflow: hidden (for the ellipsis) also clips vertically — 1.05 cut
-     the descender off the "j" in "New project". 1.3 clears Fraunces
-     descenders. */
-  line-height: 1.3;
+  font-size: 1.3rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  /* overflow: hidden (for the ellipsis) also clips vertically — keep room
+     for descenders. */
+  line-height: 1.15;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.project-slot.empty strong {
+  margin-top: 0;
+  font-size: 1.15rem;
+}
+
+/* Pass segments: CLIPS | LENGTH | SIZE, hairline-divided. */
+.slot-segments {
+  display: flex;
+  border-top: 1px solid var(--line);
+  padding-top: 6px;
+}
+
+.slot-segments > span {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 1px;
+  padding: 0 6px;
+}
+
+.slot-segments > span:first-child {
+  padding-left: 0;
+}
+
+.slot-segments > span + span {
+  border-left: 1px solid var(--line);
+}
+
+.slot-segments b {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slot-segments i {
+  font-style: normal;
+  font-family: var(--font-mono);
+  font-stretch: 75%;
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.project-slot.has-poster .slot-number,
+.project-slot.has-poster strong,
+.project-slot.has-poster .slot-segments b {
+  color: #fff;
+}
+
+.project-slot.has-poster .slot-segments i,
+.project-slot.has-poster .slot-number {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.project-slot.has-poster .slot-segments,
+.project-slot.has-poster .slot-segments > span + span {
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
 .project-slot small {
   color: var(--ink-muted);
   line-height: 1.25;
-  font-size: 0.78rem;
 }
 
 .slot-options {
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: 2px;
+  right: 2px;
   z-index: 3;
   width: var(--tap);
   height: var(--tap);
   min-height: var(--tap);
-  border-radius: 50%;
+  border-radius: var(--radius);
   display: grid;
   place-items: center;
   line-height: 0;
   color: var(--ink);
-  background: color-mix(in srgb, var(--bg-elevated) 72%, transparent);
-  border: 1px solid var(--line);
-  backdrop-filter: blur(8px);
+  background: transparent;
   transition: transform 160ms ease, opacity 160ms ease;
 }
 
 .project-slot.has-poster .slot-options {
   color: #fff;
-  background: color-mix(in srgb, #10171a 55%, transparent);
-  border-color: rgba(255, 255, 255, 0.28);
 }
 
 .slot-options:active {
@@ -404,14 +477,14 @@
   align-items: center;
   padding: 12px 6px;
   margin: -12px -6px;
-  border-radius: 999px;
+  border-radius: 4px;
 }
 
 .storage-meter-track {
   display: block;
   width: 56px;
   height: 5px;
-  border-radius: 999px;
+  border-radius: 1px;
   background: color-mix(in srgb, var(--ink) 14%, transparent);
   overflow: hidden;
 }
@@ -425,7 +498,7 @@
 }
 
 .storage-meter.is-warning .storage-meter-fill {
-  background: #e0a63a;
+  background: var(--accent);
 }
 
 .storage-meter.is-critical .storage-meter-fill {
@@ -437,7 +510,7 @@
      but never display, or the closed popover leaks into the page. */
   margin: 0;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius);
   padding: 10px 12px;
   gap: 4px;
   width: min(280px, calc(100vw - 24px));
@@ -474,7 +547,7 @@
 .home-notice {
   margin: 10px 0 0;
   padding: 10px 12px;
-  border-radius: 12px;
+  border-radius: var(--radius);
   background: var(--accent-soft);
   border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
   font-size: 0.9rem;
@@ -487,7 +560,7 @@
   gap: 10px;
   margin: 10px 0 0;
   padding: 10px 12px;
-  border-radius: 12px;
+  border-radius: var(--radius);
   background: var(--accent-soft);
   border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
   font-size: 0.9rem;
@@ -500,9 +573,9 @@
   place-items: center;
   width: 28px;
   height: 28px;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
-  color: var(--accent-text);
+  border-radius: 4px;
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 
 .install-hint-dismiss {
@@ -535,13 +608,13 @@
 }
 
 .home-option-btn {
-  min-height: var(--tap);
-  border-radius: 16px;
+  min-height: 52px;
+  border-radius: var(--radius);
   padding: 0 16px;
   text-align: left;
-  font-weight: 700;
-  font-size: 1.05rem;
-  background: color-mix(in srgb, var(--ink) 7%, transparent);
+  font-weight: 600;
+  font-size: 1rem;
+  background: var(--bg-soft);
   border: 1px solid var(--line);
   transition: transform 160ms ease, background 160ms ease;
 }
@@ -570,12 +643,12 @@
 .storage-banner {
   margin-top: 12px;
   padding: 12px 14px;
-  border-radius: 14px;
+  border-radius: var(--radius);
   display: flex;
   flex-direction: column;
   gap: 3px;
-  background: color-mix(in srgb, #e0a63a 16%, transparent);
-  border: 1px solid color-mix(in srgb, #e0a63a 45%, transparent);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
   font-size: 0.9rem;
   line-height: 1.4;
 }
@@ -601,8 +674,6 @@
   align-self: flex-start;
   min-height: 36px;
   padding: 0 14px;
-  border-radius: 999px;
-  font-size: 0.88rem;
 }
 
 /* About page */
@@ -616,9 +687,7 @@
   }
 }
 
-/* Lives above `.about-body` (the scroller), so it already stays put.
-   Do not paint a solid `--bg` slab — the page sits on body's gradient,
-   and a flat fill reads as a mismatched bar on Receive / Unlock / About. */
+/* Lives above `.about-body` (the scroller), so it already stays put. */
 .about-top {
   display: flex;
   align-items: center;
@@ -629,8 +698,12 @@
 }
 
 .about-top strong {
-  font-family: var(--font-display);
-  font-size: 1.05rem;
+  font-family: var(--font-mono);
+  font-stretch: 78%;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
 .about-top-spacer {
@@ -653,9 +726,12 @@
 
 .about-screen h1 {
   font-family: var(--font-display);
-  font-size: 2rem;
-  letter-spacing: -0.03em;
+  font-size: 2.6rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
   text-align: center;
+  line-height: 0.95;
   margin: 0 0 6px;
 }
 
@@ -680,11 +756,15 @@
   gap: 5px;
   min-height: var(--tap);
   padding: 0 8px;
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  font-weight: 700;
-  font-size: 0.88rem;
-  background: color-mix(in srgb, var(--ink) 6%, transparent);
+  border-radius: 4px;
+  border: 1px solid var(--line-strong);
+  font-family: var(--font-mono);
+  font-stretch: 80%;
+  font-weight: 600;
+  font-size: 0.74rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: transparent;
   color: var(--ink);
 }
 
@@ -695,8 +775,8 @@
 
 .video-quality-option.is-active {
   background: var(--accent);
-  color: var(--ink-strong);
-  border-color: transparent;
+  color: var(--accent-ink);
+  border-color: var(--accent);
 }
 
 .video-quality-hint {
@@ -708,8 +788,7 @@
 
 .video-quality-picker.is-compact .video-quality-option {
   min-height: 36px;
-  border-radius: 10px;
-  font-size: 0.78rem;
+  font-size: 0.68rem;
 }
 
 .video-quality-picker.is-compact .video-quality-hint {
@@ -718,12 +797,18 @@
 }
 
 .about-section {
-  margin-top: 18px;
+  margin-top: 22px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
 }
 
 .about-section h2 {
   font-family: var(--font-display);
-  font-size: 1.15rem;
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  line-height: 1.05;
   margin: 0 0 6px;
 }
 
@@ -774,7 +859,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 7px 0;
-  border-bottom: 1px solid rgba(47, 62, 70, 0.12);
+  border-bottom: 1px solid var(--line);
   color: var(--ink-muted);
 }
 
@@ -802,8 +887,8 @@
   margin: 10px 0 0;
   padding: 10px 12px;
   list-style: none;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--ink) 8%, transparent);
+  border-radius: var(--radius);
+  background: var(--bg-soft);
   border: 1px solid var(--line);
   font-size: 0.78rem;
   line-height: 1.5;
@@ -826,16 +911,16 @@
   top: 0.55em;
   width: 7px;
   height: 7px;
-  border-radius: 50%;
+  border-radius: 1px;
   background: var(--ink-muted);
 }
 
 .recording-health-takes li.is-smooth::before {
-  background: var(--accent);
+  background: #3fbf7f;
 }
 
 .recording-health-takes li.is-minor::before {
-  background: #e8b64c;
+  background: #e8a33d;
 }
 
 .recording-health-takes li.is-choppy::before {
@@ -861,11 +946,13 @@
 .camera-report {
   margin: 10px 0 0;
   padding: 10px 12px;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--ink) 8%, transparent);
+  border-radius: var(--radius);
+  background: var(--bg-soft);
   border: 1px solid var(--line);
   color: var(--ink);
-  font-size: 0.78rem;
+  font-family: var(--font-mono);
+  font-stretch: 80%;
+  font-size: 0.7rem;
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
@@ -881,18 +968,23 @@
 .about-section kbd {
   display: inline-block;
   padding: 0 5px;
-  border: 1px solid var(--line);
-  border-radius: 5px;
-  font-family: inherit;
-  font-size: 0.85em;
-  background: rgba(127, 127, 127, 0.12);
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-stretch: 80%;
+  font-size: 0.78em;
+  background: var(--bg-soft);
 }
 
 .legal-updated {
   margin: 0 0 4px;
   text-align: center;
   color: var(--ink-muted);
-  font-size: 0.9rem;
+  font-family: var(--font-mono);
+  font-stretch: 78%;
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .legal-nav {
@@ -910,15 +1002,13 @@
   place-items: end center;
   overflow-y: auto;
   padding: 16px 14px calc(16px + var(--safe-bottom));
-  background:
-    radial-gradient(85% 60% at 50% 16%, var(--glow-accent), transparent 60%),
-    color-mix(in srgb, var(--bg-deep) 76%, transparent);
-  backdrop-filter: blur(12px);
+  background: var(--overlay-scrim);
+  backdrop-filter: blur(6px);
 }
 
 .onboarding-card {
   width: min(100%, 390px);
-  border-radius: 28px;
+  border-radius: 10px;
   border: 1px solid var(--line);
   background: var(--panel-bg);
   box-shadow: var(--shadow);
@@ -933,20 +1023,17 @@
 }
 
 .onboarding-art {
-  border-radius: 22px;
   flex: 0 0 auto;
-}
-
-.onboarding-card .eyebrow {
-  margin: 0 0 4px;
 }
 
 .onboarding-card h2 {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 1.55rem;
-  letter-spacing: -0.04em;
-  line-height: 1.05;
+  font-size: 1.9rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  line-height: 0.95;
 }
 
 .onboarding-card ol {
@@ -962,23 +1049,27 @@
   grid-template-columns: 32px 1fr;
   gap: 10px;
   align-items: start;
-  padding: 8px 10px;
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--ink) 5%, transparent);
-  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
 }
 
 .onboarding-card li > span {
   width: 32px;
   height: 32px;
-  border-radius: 50%;
+  border-radius: 4px;
   display: grid;
   place-items: center;
-  background: var(--accent);
-  color: var(--ink-strong);
-  font-weight: 800;
-  font-size: 0.9rem;
+  background: var(--ink);
+  color: var(--bg);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.2rem;
   margin-top: 1px;
+}
+
+.onboarding-card li:last-child > span {
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 
 .onboarding-card strong {
@@ -1003,14 +1094,14 @@
   position: relative;
   margin: 10px 0 0;
   padding: 8px 44px 8px 8px;
-  border-radius: 16px;
-  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: var(--radius);
+  border: 1px solid var(--accent);
   background: var(--accent-soft);
 }
 
 .tour-card-teaser {
   display: grid;
-  grid-template-columns: 44px 1fr 24px;
+  grid-template-columns: 44px 1fr 20px;
   gap: 12px;
   align-items: center;
   width: 100%;
@@ -1024,16 +1115,33 @@
   cursor: pointer;
 }
 
-.tour-card-teaser img {
+/* "3 STOPS" set like a gate number. */
+.tour-card-code {
+  display: grid;
+  place-items: center;
+  align-content: center;
   width: 44px;
-  height: 78px;
-  object-fit: cover;
-  border-radius: 10px;
-  display: block;
+  height: 52px;
+  border-radius: 4px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  font-weight: 700;
+  line-height: 0.9;
+}
+
+.tour-card-code small {
+  font-family: var(--font-mono);
+  font-stretch: 75%;
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .tour-card-teaser svg {
-  color: var(--accent-text);
+  color: var(--ink);
 }
 
 .tour-card-copy {
@@ -1059,7 +1167,7 @@
   right: 8px;
 }
 
-/* Tour video dialog: native <dialog> top layer — never reflows the page. */
+/* Tour dialog: native <dialog> top layer — never reflows the page. */
 
 .tour-dialog {
   padding: 0;
@@ -1067,31 +1175,94 @@
   background: transparent;
   overflow: visible;
   outline: none;
+  color: var(--ink);
 }
 
 .tour-dialog::backdrop {
-  /* --overlay-scrim, hardcoded: custom properties don't reach ::backdrop
-     in all engines. */
-  background: rgba(7, 20, 17, 0.72);
-  backdrop-filter: blur(12px);
+  /* Hardcoded: custom properties don't reach ::backdrop in all engines. */
+  background: rgba(11, 13, 16, 0.72);
+  backdrop-filter: blur(6px);
 }
 
-.tour-dialog-video {
-  display: block;
-  width: min(86vw, calc(80dvh * 9 / 16));
-  aspect-ratio: 9 / 16;
-  border-radius: 16px;
-  background: var(--stage-bg);
-  object-fit: contain;
+.tour-dialog[open] .tour-pass {
+  animation: rise-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* The tour is a pass: perforated edges, printed stops, one yellow action. */
+.tour-pass {
+  position: relative;
+  width: min(88vw, 380px);
+  padding: 14px 16px 16px;
+  border-radius: 10px;
+  background: var(--panel-bg);
   box-shadow: var(--shadow);
 }
 
+.tour-pass-head,
+.tour-pass-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tour-pass-foot {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 2px dotted var(--line-strong);
+}
+
 .tour-dialog-close {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: var(--chip-bg);
-  color: var(--ink);
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.tour-stops {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+}
+
+.tour-stops li {
+  display: grid;
+  grid-template-columns: 44px 1fr 24px;
+  gap: 12px;
+  align-items: start;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+
+.tour-stop-code {
+  font-family: var(--font-display);
+  font-size: 2.2rem;
+  font-weight: 700;
+  line-height: 0.85;
+  font-variant-numeric: tabular-nums;
+}
+
+.tour-stops li:last-child .tour-stop-code {
+  color: var(--accent-text);
+}
+
+.tour-stops strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.tour-stops p {
+  margin: 4px 0 0;
+  color: var(--ink-muted);
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.tour-stop-icon {
+  color: var(--ink-muted);
+  line-height: 0;
 }
 
 @media (max-height: 720px) {
@@ -1101,11 +1272,11 @@
   }
 
   .home-screen .brand {
-    font-size: 1.5rem;
+    font-size: 1.9rem;
   }
 
   .home-screen .lede {
-    font-size: 0.8rem;
+    font-size: 0.6rem;
   }
 
   .project-slot strong {
@@ -1122,12 +1293,12 @@
   }
 
   .tour-card-teaser {
-    grid-template-columns: 36px 1fr 24px;
+    grid-template-columns: 40px 1fr 20px;
     gap: 10px;
   }
 
-  .tour-card-teaser img {
-    width: 36px;
-    height: 64px;
+  .tour-card-code {
+    width: 40px;
+    height: 46px;
   }
 }

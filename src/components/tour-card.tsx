@@ -1,62 +1,66 @@
 import type { Handle } from 'remix/component'
 import { on, ref } from 'remix/component'
-import { IconClose, IconPlay } from './icons'
-
-/**
- * Promo/tour video, self-hosted on R2 behind the site's own domain (no
- * third-party player, no tracking). Streamed only when the user taps play —
- * the card itself costs nothing but the precached poster.
- */
-const TOUR_VIDEO_URL = 'https://media.kody.video/promo/kody-video-promo-v1.mp4'
-const TOUR_POSTER_URL = '/art/kody-video-tour-poster.webp'
+import { IconChevronRight, IconClose, IconEditor, IconPlay, IconShareIos } from './icons'
 
 interface TourCardProps {
   onDismiss: () => void
 }
 
+/** The whole flow on one pass: three stops from first clip to shared video. */
+const STOPS = [
+  {
+    code: '01',
+    title: 'Hold to record',
+    body: 'Press anywhere on the camera. Release to stop — every take lands as a clip.',
+    Icon: IconPlay,
+  },
+  {
+    code: '02',
+    title: 'Arrange',
+    body: 'Open the timeline to trim, split, reorder, add photos and music.',
+    Icon: IconEditor,
+  },
+  {
+    code: '03',
+    title: 'Tap Go',
+    body: 'One video is made right on this phone. Share or Save — no watermark, nothing uploaded.',
+    Icon: IconShareIos,
+  },
+]
+
 /**
- * Open the tour dialog from a user gesture and start playback.
- * Idempotent: a second tap while already open must not call `showModal()`
- * again — that throws `InvalidStateError` (seen on Safari/iOS double-taps).
+ * Open the tour dialog from a user gesture. Idempotent: a second tap while
+ * already open must not call `showModal()` again — that throws
+ * `InvalidStateError` (seen on Safari/iOS double-taps).
  */
-export function openTourFromGesture(
-  dialog: HTMLDialogElement | null,
-  video: HTMLVideoElement | null,
-): void {
-  if (dialog && !dialog.open) {
-    dialog.showModal()
-  }
-  void video?.play().catch(() => {})
+export function openTourFromGesture(dialog: HTMLDialogElement | null): void {
+  if (dialog && !dialog.open) dialog.showModal()
 }
 
 /**
  * First-timer home card: the teaser opens the tour in a native `<dialog>`
  * (top layer — the page layout underneath never reflows) with a persistent
- * dismiss on the card itself.
+ * dismiss on the card itself. Works offline: the tour is the app's own UI.
  */
 export function TourCard(handle: Handle<TourCardProps>) {
   let dialog: HTMLDialogElement | null = null
-  let video: HTMLVideoElement | null = null
 
   return () => (
-    <section className="tour-card" aria-label="Kody Video tour">
+    <section className="tour-card" aria-label="Clipcam tour">
       <button
         type="button"
         className="tour-card-teaser"
-        mix={on('click', () => {
-          // showModal() + play() in the same tap: the dialog needs no
-          // re-render to appear, and mobile autoplay policies require the
-          // unmuted play() to run inside the gesture. If play() still
-          // rejects, the controls are right there.
-          openTourFromGesture(dialog, video)
-        })}
+        mix={on('click', () => openTourFromGesture(dialog))}
       >
-        <img src={TOUR_POSTER_URL} alt="" width={44} height={78} />
-        <span className="tour-card-copy">
-          <strong>New here? Watch the tour</strong>
-          <span>Kent demos the whole flow — record, arrange, share — in a minute and a half.</span>
+        <span className="tour-card-code" aria-hidden="true">
+          3
+          <small>stops</small>
         </span>
-        <IconPlay />
+        <span className="tour-card-copy">
+          <strong>New here? See how it works</strong>
+          <span>Record, arrange, share — the whole trip in 30 seconds.</span>
+        </span>
+        <IconChevronRight size={20} />
       </button>
       <button
         type="button"
@@ -68,7 +72,7 @@ export function TourCard(handle: Handle<TourCardProps>) {
       </button>
       <dialog
         className="tour-dialog"
-        aria-label="Kody Video tour video"
+        aria-label="How Clipcam works"
         mix={[
           ref((node, signal) => {
             dialog = node as HTMLDialogElement
@@ -76,40 +80,52 @@ export function TourCard(handle: Handle<TourCardProps>) {
               dialog = null
             })
           }),
-          // Esc (native cancel) and every other close path land here — the
-          // audio must never keep playing behind a closed dialog.
-          on('close', () => video?.pause()),
-          // The dialog has no padding, so clicks on the element itself can
-          // only come from the ::backdrop — tap outside to close.
+          // The pass has its own padding box; clicks on the dialog element
+          // itself can only come from the ::backdrop — tap outside to close.
           on('click', (event) => {
             if (event.target === event.currentTarget) dialog?.close()
           }),
         ]}
       >
-        <video
-          className="tour-dialog-video"
-          src={TOUR_VIDEO_URL}
-          poster={TOUR_POSTER_URL}
-          controls
-          tabIndex={0}
-          playsInline
-          preload="none"
-          mix={ref((node, signal) => {
-            video = node as HTMLVideoElement
-            signal.addEventListener('abort', () => {
-              video = null
-            })
-          })}
-        />
-        <button
-          type="button"
-          className="btn-icon tour-dialog-close"
-          aria-label="Close tour"
-          mix={on('click', () => dialog?.close())}
-        >
-          <IconClose />
-        </button>
+        <div className="tour-pass">
+          <header className="tour-pass-head">
+            <span className="board-label">Clipcam · How it works</span>
+            <button
+              type="button"
+              className="btn-icon tour-dialog-close"
+              aria-label="Close tour"
+              mix={on('click', () => dialog?.close())}
+            >
+              <IconClose />
+            </button>
+          </header>
+          <ol className="tour-stops">
+            {STOPS.map(({ code, title, body, Icon }) => (
+              <li key={code}>
+                <span className="tour-stop-code">{code}</span>
+                <div>
+                  <strong>{title}</strong>
+                  <p>{body}</p>
+                </div>
+                <span className="tour-stop-icon" aria-hidden="true">
+                  <Icon />
+                </span>
+              </li>
+            ))}
+          </ol>
+          <footer className="tour-pass-foot">
+            <span className="board-label">Free · On-device · Works offline</span>
+            <button
+              type="button"
+              className="btn btn-primary"
+              mix={on('click', () => dialog?.close())}
+            >
+              Got it
+            </button>
+          </footer>
+        </div>
       </dialog>
     </section>
   )
 }
+
