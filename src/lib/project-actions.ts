@@ -71,13 +71,7 @@ export interface ProjectLoaderData {
   audio: ProjectAudioRecord | null
   canUndo: boolean
   onboardingDismissed: boolean
-  /** True when the one-time Kody Video Plus purchase is unlocked. */
-  watermarkRemoved: boolean
-  /**
-   * Plus opt-in: keep the Kody mark on exports after purchase (default off).
-   */
-  keepWatermark: boolean
-  /** Plus opt-in: include captured coordinates in MP4 exports (default off). */
+  /** Opt-in: include captured coordinates in MP4 exports (default off). */
   includeLocationInExports: boolean
   /** Device storage estimate (null when the API is unavailable). */
   storage: StorageSpace | null
@@ -93,11 +87,9 @@ export interface HomeLoaderData {
   exportCacheBytes: number
   /** Bytes in records no project can reach (reclaimOrphanedStorage). */
   orphanBytes: number
-  /** True when the one-time Kody Video Plus purchase is unlocked. */
-  plus: boolean
   /** Home "Watch the tour" card dismissed (first-timer teaser). */
   tourCardDismissed: boolean
-  /** Capture quality for new recordings (missing follows Plus: high / standard). */
+  /** Capture quality for new recordings (missing = high). */
   videoQuality: 'high' | 'standard' | 'saver'
 }
 
@@ -113,9 +105,8 @@ export async function loadHomePage(): Promise<HomeLoaderData> {
     storage,
     exportCacheBytes,
     orphanBytes,
-    plus: settings.watermarkRemoved === true,
     tourCardDismissed: settings.tourCardDismissed === true,
-    videoQuality: resolveVideoQuality(settings.videoQuality, settings.watermarkRemoved === true),
+    videoQuality: resolveVideoQuality(settings.videoQuality),
   }
 }
 
@@ -190,13 +181,11 @@ export async function loadProjectPage(projectId: ProjectId): Promise<ProjectLoad
         audio: null,
         canUndo: false,
         onboardingDismissed: settings.onboardingDismissed,
-        watermarkRemoved: settings.watermarkRemoved === true,
-        keepWatermark: settings.keepWatermark === true,
         includeLocationInExports:
-          settings.watermarkRemoved === true && settings.includeLocationInExports === true,
+          settings.includeLocationInExports === true,
         storage,
         locationTaggingEnabled:
-          settings.watermarkRemoved === true && settings.locationTaggingEnabled === true,
+          settings.locationTaggingEnabled === true,
         error: null,
       }
     }
@@ -216,13 +205,11 @@ export async function loadProjectPage(projectId: ProjectId): Promise<ProjectLoad
         audio: null,
         canUndo: false,
         onboardingDismissed: settings.onboardingDismissed,
-        watermarkRemoved: settings.watermarkRemoved === true,
-        keepWatermark: settings.keepWatermark === true,
         includeLocationInExports:
-          settings.watermarkRemoved === true && settings.includeLocationInExports === true,
+          settings.includeLocationInExports === true,
         storage,
         locationTaggingEnabled:
-          settings.watermarkRemoved === true && settings.locationTaggingEnabled === true,
+          settings.locationTaggingEnabled === true,
         error: 'Project not found',
       }
     }
@@ -236,13 +223,11 @@ export async function loadProjectPage(projectId: ProjectId): Promise<ProjectLoad
       audio: audio ?? null,
       canUndo: !!undo,
       onboardingDismissed: settings.onboardingDismissed,
-      watermarkRemoved: settings.watermarkRemoved === true,
-      keepWatermark: settings.keepWatermark === true,
       includeLocationInExports:
-        settings.watermarkRemoved === true && settings.includeLocationInExports === true,
+        settings.includeLocationInExports === true,
       storage,
       locationTaggingEnabled:
-        settings.watermarkRemoved === true && settings.locationTaggingEnabled === true,
+        settings.locationTaggingEnabled === true,
       error: null,
     }
   } catch (err) {
@@ -252,8 +237,6 @@ export async function loadProjectPage(projectId: ProjectId): Promise<ProjectLoad
       audio: null,
       canUndo: false,
       onboardingDismissed: true,
-      watermarkRemoved: false,
-      keepWatermark: false,
       includeLocationInExports: false,
       storage: null,
       locationTaggingEnabled: false,
