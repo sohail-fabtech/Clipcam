@@ -2,7 +2,7 @@
 
 This repository is Fair Source ([FSL-1.1-ALv2](./LICENSE)). Outside pull
 requests need a signed inbound Contributor License Agreement. You keep
-copyright; the CLA is the license grant that keeps Kody Video a
+copyright; the CLA is the license grant that keeps Clipcam a
 single-licensor tree.
 
 - [Inbound contributions](./docs/contribute/inbound-contributions.md) —
