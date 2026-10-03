@@ -106,45 +106,35 @@ test.describe('home & app shell', () => {
     await expect(page.locator('.onboarding-overlay')).toBeHidden()
   })
 
-  test('first-timer tour card plays the tour and dismisses for good', async ({ page }) => {
+  test('first-timer tour card opens the tour and dismisses for good', async ({ page }) => {
     await page.goto('/')
     const card = page.locator('.tour-card')
     await expect(card).toBeVisible()
 
-    // Teaser opens a top-layer <dialog> playing from media.kody.video —
-    // the page layout underneath must not reflow while it plays.
+    // Teaser opens a top-layer <dialog> — the page layout underneath must not
+    // reflow while it is open, and it works offline (no streamed video).
     const slots = page.locator('.project-slots')
     await expect(slots).toBeVisible()
     const slotsBox = await slots.boundingBox()
     expect(slotsBox).not.toBeNull()
-    const teaser = card.getByRole('button', { name: /watch the tour/i })
+    const teaser = card.getByRole('button', { name: /see how it works/i })
     const pageErrors: string[] = []
     page.on('pageerror', (err) => pageErrors.push(err.message))
     await teaser.click()
     const dialog = page.locator('dialog.tour-dialog')
     await expect(dialog).toBeVisible()
+    await expect(dialog).toContainText('Hold to record')
+    await expect(dialog).toContainText('Tap Go')
     // Second activation while open: dispatch on the teaser so we don't hit
     // the modal backdrop (a physical dblclick can after showModal() inerting).
     await teaser.dispatchEvent('click')
     await expect(dialog).toBeVisible()
     expect(pageErrors.filter((m) => /showModal|InvalidStateError/i.test(m))).toEqual([])
-    const video = dialog.locator('video.tour-dialog-video')
-    await expect(video).toHaveAttribute('src', /^https:\/\/media\.kody\.video\//)
-    // The tap itself must start playback (in-gesture play() is what mobile
-    // autoplay policies require) — rendered state alone can't prove that.
-    // Generous timeout: the video streams over the real network and the
-    // parallel suite competes for bandwidth.
-    await expect
-      .poll(() => video.evaluate((el: HTMLVideoElement) => el.currentTime), { timeout: 20_000 })
-      .toBeGreaterThan(0)
     expect(await slots.boundingBox()).toEqual(slotsBox)
 
-    // Esc closes the dialog and stops the audio.
+    // Esc closes the dialog.
     await page.keyboard.press('Escape')
     await expect(dialog).toBeHidden()
-    await expect
-      .poll(() => video.evaluate((el: HTMLVideoElement) => el.paused))
-      .toBe(true)
     await expect(teaser).toBeVisible()
 
     // Dismissal persists across SPA navigation (cached home data) …
@@ -247,7 +237,7 @@ test.describe('home & app shell', () => {
     await expect(page.locator('meta[name="theme-color"]')).toHaveCount(3)
     await expect(page.locator('meta[name="theme-color"]:not([media])')).toHaveAttribute(
       'content',
-      '#2F3E46',
+      '#0B0D10',
     )
     await expect(meta('og:image', 'property')).toHaveAttribute(
       'content',

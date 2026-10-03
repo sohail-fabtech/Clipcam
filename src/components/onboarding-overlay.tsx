@@ -31,10 +31,7 @@ export function OnboardingOverlay(handle: Handle<OnboardingOverlayProps>) {
       <div className="onboarding-card">
         <div className="onboarding-card-top">
           <BrandMark size={72} className="brand-mark onboarding-art" />
-          <div>
-            <p className="eyebrow">Quick start</p>
-            <h2>Camera first. Fun second.</h2>
-          </div>
+          <h2>Camera first. Fun second.</h2>
         </div>
         <ol>
           {steps.map((step, index) => (
