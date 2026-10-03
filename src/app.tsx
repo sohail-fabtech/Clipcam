@@ -8,7 +8,6 @@ import { Router } from './router'
 import { HomePage } from './pages/home-page'
 
 const ProjectPage = lazyPage(() => import('./pages/project-page'), 'ProjectPage')
-const UnlockedPage = lazyPage(() => import('./pages/unlocked-page'), 'UnlockedPage')
 const AboutPage = lazyPage(() => import('./pages/about-page'), 'AboutPage')
 const PrivacyPage = lazyPage(() => import('./pages/privacy-page'), 'PrivacyPage')
 const TermsPage = lazyPage(() => import('./pages/terms-page'), 'TermsPage')
@@ -64,8 +63,6 @@ export function App(handle: Handle) {
           '/project/:projectId': (params) => (
             <ProjectPage projectId={params.projectId ?? ''} />
           ),
-          '/unlocked': () => <UnlockedPage />,
-          '/unlocked/:code': (params) => <UnlockedPage code={params.code ?? ''} />,
           '/about': () => <AboutPage />,
           '/privacy': () => <PrivacyPage />,
           '/terms': () => <TermsPage />,
