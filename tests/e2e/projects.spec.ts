@@ -52,13 +52,13 @@ test.describe('project slots', () => {
     expect(clipsLeft).toBe(0)
   })
 
-  test('backup downloads a .kodyvideo file and import restores it', async ({ page }) => {
+  test('backup downloads a .clipcam file and import restores it', async ({ page }) => {
     await createProjectWithClip(page)
     await page.locator('.slot-options').click()
     const downloadPromise = page.waitForEvent('download')
     await page.getByRole('button', { name: 'Save backup' }).click()
     const download = await downloadPromise
-    expect(download.suggestedFilename()).toMatch(/\.kodyvideo$/)
+    expect(download.suggestedFilename()).toMatch(/\.clipcam$/)
     const backupPath = await download.path()
 
     // Delete the original, then round-trip through Import.
@@ -82,7 +82,7 @@ test.describe('project slots', () => {
     expect(restored).toEqual({ clips: 1 })
   })
 
-  test('dropping a .kodyvideo file on home restores the project', async ({ page }) => {
+  test('dropping a .clipcam file on home restores the project', async ({ page }) => {
     await createProjectWithClip(page)
     await page.locator('.slot-options').click()
     const downloadPromise = page.waitForEvent('download')
@@ -108,7 +108,7 @@ test.describe('project slots', () => {
     await expect(page.locator('.project-slot.filled')).toHaveCount(0)
 
     await page.evaluate((bytes) => {
-      const file = new File([new Uint8Array(bytes)], 'restored.kodyvideo', {
+      const file = new File([new Uint8Array(bytes)], 'restored.clipcam', {
         type: 'application/octet-stream',
       })
       const dt = new DataTransfer()
@@ -123,7 +123,7 @@ test.describe('project slots', () => {
     await expect(page.locator('.backup-drop-overlay')).toContainText('Drop to import')
 
     await page.evaluate((bytes) => {
-      const file = new File([new Uint8Array(bytes)], 'restored.kodyvideo', {
+      const file = new File([new Uint8Array(bytes)], 'restored.clipcam', {
         type: 'application/octet-stream',
       })
       const dt = new DataTransfer()

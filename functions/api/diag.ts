@@ -21,7 +21,7 @@ const PAGE = `<!doctype html>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex" />
-    <title>Kody Video — diagnostics</title>
+    <title>Clipcam — diagnostics</title>
     <style>
       body { font-family: system-ui, sans-serif; background: #2f3e46; color: #f3f5f4; margin: 0; padding: 20px; }
       h1 { font-size: 1.2rem; }
@@ -30,7 +30,7 @@ const PAGE = `<!doctype html>
     </style>
   </head>
   <body>
-    <h1>Kody Video diagnostics</h1>
+    <h1>Clipcam diagnostics</h1>
     <pre id="out">Running…</pre>
     <button id="repair" type="button">Repair &amp; open the app</button>
     <script type="module">

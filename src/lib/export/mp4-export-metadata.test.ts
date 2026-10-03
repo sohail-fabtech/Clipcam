@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { ClipRecord } from '../types'
 import {
-  KODY_VIDEO_ENCODER,
-  KODY_VIDEO_SITE,
+  APP_ENCODER,
   buildExportDescriptiveMetadata,
   formatChapterTitle,
   formatClipMix,
@@ -76,7 +75,7 @@ describe('MP4 export descriptive metadata', () => {
     kind: 'image' as const,
   }
 
-  it('credits kody.video and summarizes clips without capture-context by default', () => {
+  it('credits Clipcam and summarizes clips without capture-context by default', () => {
     const tags = buildExportDescriptiveMetadata({
       projectName: 'Beach day',
       clips: [video, video, photo],
@@ -86,11 +85,10 @@ describe('MP4 export descriptive metadata', () => {
     })
 
     expect(tags.title).toBe('Beach day')
-    expect(tags.encoder).toBe(KODY_VIDEO_ENCODER)
-    expect(tags.encoder).toContain(KODY_VIDEO_SITE)
-    expect(tags.comment).toBe('3 clips (2 videos, 1 photo) · 24s · with music · kody.video')
+    expect(tags.encoder).toBe(APP_ENCODER)
+    expect(tags.comment).toBe('3 clips (2 videos, 1 photo) · 24s · with music · Clipcam')
     expect(tags.description).toBe(
-      ['3 clips (2 videos, 1 photo) · 24s · with music', `Made with Kody Video — ${KODY_VIDEO_SITE}`].join(
+      ['3 clips (2 videos, 1 photo) · 24s · with music', 'Made with Clipcam'].join(
         '\n',
       ),
     )
@@ -117,7 +115,7 @@ describe('MP4 export descriptive metadata', () => {
     expect(tags.creationTimeMs).toBe(laterDay.createdAt)
     expect(tags.date).toBe(formatQuickTimeDay(laterDay.createdAt))
     expect(tags.description).toContain('Filmed 2026-08-08 – 2026-08-09')
-    expect(tags.comment).toBe('2 clips · 6s · kody.video')
+    expect(tags.comment).toBe('2 clips · 6s · Clipcam')
     expect(tags.comment).not.toContain('2026-08-08')
   })
 
@@ -142,8 +140,8 @@ describe('MP4 export descriptive metadata', () => {
       hasMusic: false,
       includeLocation: false,
     })
-    expect(tags.title).toBe('Kody Video')
-    expect(tags.comment).toBe('1 photo · 3s · kody.video')
+    expect(tags.title).toBe('Clipcam')
+    expect(tags.comment).toBe('1 photo · 3s · Clipcam')
   })
 
   it('formats clip mixes and compact durations', () => {

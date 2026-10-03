@@ -12,7 +12,7 @@ import { ProjectLimitError, StorageQuotaExceededError } from '../lib/storage'
 import { navigate } from '../router'
 
 /**
- * App-wide drop target for `.kodyvideo` backups. OS file drags never expose
+ * App-wide drop target for `.clipcam` (and legacy `.kodyvideo`) backups. OS file drags never expose
  * names until drop, so we highlight whenever files are dragged in and only
  * import a matching backup. Other file types are ignored.
  */
@@ -105,7 +105,7 @@ export function BackupDropOverlay(handle: Handle) {
         <div className="backup-drop-overlay" role="status" aria-live="polite">
           <strong>Drop to import</strong>
           <p>
-            Restore a <code>.kodyvideo</code> backup as a new project.
+            Restore a <code>.clipcam</code> backup as a new project.
           </p>
         </div>
       ) : null}

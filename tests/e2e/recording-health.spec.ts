@@ -50,13 +50,13 @@ test.describe('recording health reports', () => {
     await expect(section.locator('.recording-health-takes li')).toHaveCount(1)
     await expect(section.locator('.recording-health-takes li')).toContainText(/fps/)
     // Off the reporting hosts there is no Send button at all.
-    await expect(section.getByRole('button', { name: 'Send to Kody Video' })).toHaveCount(0)
+    await expect(section.getByRole('button', { name: 'Send report' })).toHaveCount(0)
 
     // Headless Chromium has no Web Share, so Share falls back to a download.
     const downloadPromise = page.waitForEvent('download')
     await section.getByRole('button', { name: 'Share report' }).click()
     const download = await downloadPromise
-    expect(download.suggestedFilename()).toBe('kody-video-recording-report.txt')
+    expect(download.suggestedFilename()).toBe('clipcam-recording-report.txt')
     const exported = JSON.parse(await readFile((await download.path())!, 'utf8'))
     expect(exported.kind).toBe('kody-video-recording-report')
     expect(exported.summary.takes).toBe(1)

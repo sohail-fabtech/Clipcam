@@ -18,7 +18,7 @@ const PAGE = `<!doctype html>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex" />
-    <title>Kody Video — repair</title>
+    <title>Clipcam — repair</title>
     <style>
       body { font-family: system-ui, sans-serif; background: #2f3e46; color: #f3f5f4;
              display: grid; place-items: center; min-height: 100vh; margin: 0; text-align: center; }
@@ -29,7 +29,7 @@ const PAGE = `<!doctype html>
   </head>
   <body>
     <main>
-      <h1>Repairing Kody Video…</h1>
+      <h1>Repairing Clipcam…</h1>
       <p id="status">Removing the stuck service worker and cached app files. Your projects and clips are not touched.</p>
     </main>
     <script type="module">
@@ -67,7 +67,7 @@ const PAGE = `<!doctype html>
         status.textContent = 'Done - taking you back to the app...'
         setTimeout(() => location.replace('/'), 900)
       } catch (err) {
-        status.textContent = 'Could not finish automatically: ' + err + ' - close every Kody Video tab and app window, then open kody.video again.'
+        status.textContent = 'Could not finish automatically: ' + err + ' - close every Clipcam tab and app window, then open the app again.'
       }
     </script>
   </body>

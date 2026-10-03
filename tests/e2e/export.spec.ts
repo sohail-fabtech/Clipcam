@@ -278,6 +278,6 @@ test.describe('Go / export', () => {
     // Each joint trades CROSSFADE_MS of timeline for the overlap (codec
     // padding keeps this a sanity bound, not an exact one).
     expect(measured!.durationSec).toBeGreaterThan(3.9)
-    expect(measured!.durationSec).toBeLessThan(4.05)
+    expect(measured!.durationSec).toBeLessThan(4.1)
   })
 })

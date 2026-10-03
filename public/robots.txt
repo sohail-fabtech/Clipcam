@@ -29,4 +29,3 @@ Allow: /
 Disallow: /project/
 Disallow: /api/
 
-Sitemap: https://kody.video/sitemap.xml

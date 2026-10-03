@@ -383,7 +383,7 @@ describe('isIndexedDbBackingStoreOpenEvent', () => {
             {
               type: 'IndexedDbUnavailableError',
               value:
-                'This browser can’t open on-device storage right now. Free some disk space, close other kody.video tabs, or restart the browser — then reload.',
+                'This browser can’t open on-device storage right now. Free some disk space, close other Clipcam tabs, or restart the browser — then reload.',
             },
           ],
         },

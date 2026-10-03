@@ -27,7 +27,7 @@ const steps = [
 
 export function OnboardingOverlay(handle: Handle<OnboardingOverlayProps>) {
   return () => (
-    <div className="onboarding-overlay" role="dialog" aria-label="Kody Video quick start">
+    <div className="onboarding-overlay" role="dialog" aria-label="Clipcam quick start">
       <div className="onboarding-card">
         <div className="onboarding-card-top">
           <BrandMark size={72} className="brand-mark onboarding-art" variant="camera" />

@@ -5,9 +5,8 @@ type ChapterClip = Pick<ClipRecord, 'createdAt' | 'durationMs' | 'lat' | 'lng'>
 type LocatedClip = Pick<ClipRecord, 'lat' | 'lng'>
 type CompositionClip = Pick<ClipRecord, 'kind' | 'createdAt' | 'durationMs'>
 
-export const KODY_VIDEO_SITE = 'https://kody.video'
-export const KODY_VIDEO_ENCODER = 'Kody Video (https://kody.video)'
-export const KODY_VIDEO_TITLE_FALLBACK = 'Kody Video'
+export const APP_ENCODER = 'Clipcam'
+export const APP_TITLE_FALLBACK = 'Clipcam'
 
 export interface ExportDescriptiveMetadataInput {
   projectName?: string
@@ -88,13 +87,13 @@ export function locationForExport(
 export function buildExportDescriptiveMetadata(
   input: ExportDescriptiveMetadataInput,
 ): ExportDescriptiveMetadata {
-  const title = sanitizeMetadataText(input.projectName) || KODY_VIDEO_TITLE_FALLBACK
+  const title = sanitizeMetadataText(input.projectName) || APP_TITLE_FALLBACK
   const mix = formatClipMix(input.clips)
   const duration = formatMetadataDuration(input.filmDurationMs)
   const parts = [mix, duration]
   if (input.hasMusic) parts.push('with music')
 
-  const commentParts = [...parts, 'kody.video']
+  const commentParts = [...parts, 'Clipcam']
   const descriptionLines = [`${parts.join(' · ')}`]
 
   let date: string | undefined
@@ -115,11 +114,11 @@ export function buildExportDescriptiveMetadata(
     }
   }
 
-  descriptionLines.push(`Made with Kody Video — ${KODY_VIDEO_SITE}`)
+  descriptionLines.push('Made with Clipcam')
 
   return {
     title,
-    encoder: KODY_VIDEO_ENCODER,
+    encoder: APP_ENCODER,
     comment: commentParts.join(' · '),
     description: descriptionLines.join('\n'),
     date,

@@ -481,30 +481,6 @@
   line-height: 1.4;
 }
 
-.home-migrate {
-  margin: 10px 0 0;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: var(--accent-soft);
-  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
-  font-size: 0.9rem;
-  line-height: 1.45;
-}
-
-.home-migrate a {
-  color: var(--accent);
-  font-weight: 700;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-/* Rewrite-showcase note (remix.kody.video): migrate styling + a dismiss. */
-.home-showcase {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-}
-
 .home-install-hint {
   display: flex;
   align-items: flex-start;

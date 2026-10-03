@@ -2,8 +2,8 @@ export type ProjectId = string
 export type ClipId = string
 
 /** The film's shape: portrait (the default, phone-style) or landscape.
- * Landscape is a Kody Video Plus perk. Defaults to the first clip's
- * orientation; the user can change it later as a project setting. */
+ * Defaults to the first clip's orientation; the user can change it later as
+ * a project setting. */
 export type ProjectOrientation = 'portrait' | 'landscape'
 
 /** How a mismatched clip is fitted into the film. Absent = crop. */

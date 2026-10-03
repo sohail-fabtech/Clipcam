@@ -18,8 +18,8 @@ import {
 } from '../lib/take-report'
 
 /** Chrome's Web Share allowlist has no .json — the file is JSON either way. */
-const SHARE_FILENAME = 'kody-video-recording-report.txt'
-const SEND_FILENAME = 'kody-video-recording-report.json'
+const SHARE_FILENAME = 'clipcam-recording-report.txt'
+const SEND_FILENAME = 'clipcam-recording-report.json'
 const RECENT_TAKES_SHOWN = 12
 
 function formatWhen(at: number): string {
@@ -160,7 +160,7 @@ export function RecordingHealthPanel(handle: Handle) {
         filename: SEND_FILENAME,
       })
       return sent
-        ? 'Sent to the Kody Video team — thank you.'
+        ? 'Report sent — thank you.'
         : "Couldn't send right now — use Share instead."
     })
 
@@ -230,7 +230,7 @@ export function RecordingHealthPanel(handle: Handle) {
                   disabled={busy}
                   mix={on('click', onSend)}
                 >
-                  Send to Kody Video
+                  Send report
                 </button>
               ) : null}
               <button

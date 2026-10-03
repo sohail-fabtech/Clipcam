@@ -45,6 +45,6 @@ describe('sync protocol', () => {
       byteLength: 1234,
       filename: 'trip.kodyvideo',
     })
-    expect(() => decodeSyncHeader('nope')).toThrow(/not a Kody Video project/)
+    expect(() => decodeSyncHeader('nope')).toThrow(/not a Clipcam project/)
   })
 })

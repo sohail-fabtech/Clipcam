@@ -348,7 +348,7 @@ export async function receiveBackupOnChannel(
   const parts: ArrayBuffer[] = []
   let expected = 0
   let received = 0
-  let filename = 'project.kodyvideo'
+  let filename = 'project.clipcam'
   let sawHeader = false
 
   return new Promise((resolve, reject) => {

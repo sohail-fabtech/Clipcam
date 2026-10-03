@@ -1,5 +1,5 @@
 /**
- * iOS never fires `beforeinstallprompt`, so the only way to get Kody Video on
+ * iOS never fires `beforeinstallprompt`, so the only way to get Clipcam on
  * a home screen there is the manual Share → Add to Home Screen flow. This
  * decides when nudging about that is actually useful.
  */

@@ -99,7 +99,9 @@ interface Manifest {
   audio?: ManifestAudio
 }
 
-export const KODY_VIDEO_BACKUP_EXTENSION = '.kodyvideo'
+export const BACKUP_EXTENSION = '.clipcam'
+/** Backups written before the Clipcam rename — same format, still importable. */
+const LEGACY_BACKUP_EXTENSION = '.kodyvideo'
 
 export function projectBackupFilename(projectName: string): string {
   const slug =
@@ -108,12 +110,13 @@ export function projectBackupFilename(projectName: string): string {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '')
       .slice(0, 40) || 'project'
-  return `${slug}${KODY_VIDEO_BACKUP_EXTENSION}`
+  return `${slug}${BACKUP_EXTENSION}`
 }
 
-/** True when the picked/dropped file uses the Kody Video backup extension. */
+/** True when the picked/dropped file uses a Clipcam backup extension. */
 export function isKodyVideoBackupFile(file: Pick<File, 'name'>): boolean {
-  return file.name.toLowerCase().endsWith(KODY_VIDEO_BACKUP_EXTENSION)
+  const name = file.name.toLowerCase()
+  return name.endsWith(BACKUP_EXTENSION) || name.endsWith(LEGACY_BACKUP_EXTENSION)
 }
 
 /** Backup files from a picker or drop, in the order they were supplied. */
@@ -210,7 +213,7 @@ export interface ParsedBackup {
 }
 
 /**
- * A file the user picked that isn't a (valid, current) Kody Video backup.
+ * A file the user picked that isn't a (valid, current) Clipcam backup.
  * Surfaced in-app as guidance; expected user input, never a crash report.
  */
 export class BackupFormatError extends Error {
@@ -223,11 +226,11 @@ export class BackupFormatError extends Error {
  */
 export async function parseProjectBackup(file: Blob): Promise<ParsedBackup> {
   const headerLength = MAGIC_BYTES.byteLength + 4
-  if (file.size < headerLength) throw new BackupFormatError('Not a Kody Video backup file')
+  if (file.size < headerLength) throw new BackupFormatError('Not a Clipcam backup file')
 
   const header = new Uint8Array(await file.slice(0, headerLength).arrayBuffer())
   for (let i = 0; i < MAGIC_BYTES.byteLength; i += 1) {
-    if (header[i] !== MAGIC_BYTES[i]) throw new BackupFormatError('Not a Kody Video backup file')
+    if (header[i] !== MAGIC_BYTES[i]) throw new BackupFormatError('Not a Clipcam backup file')
   }
   const manifestLength = new DataView(header.buffer).getUint32(MAGIC_BYTES.byteLength)
   if (manifestLength <= 0 || headerLength + manifestLength > file.size) {

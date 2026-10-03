@@ -13,7 +13,7 @@ import {
   injectMp4Metadata,
   type Mp4Chapter,
 } from './mp4-metadata'
-import { KODY_VIDEO_ENCODER, KODY_VIDEO_SITE } from './mp4-export-metadata'
+import { APP_ENCODER } from './mp4-export-metadata'
 
 const AVC_DESC = new Uint8Array([
   0x01, 0x42, 0x00, 0x1e, 0xff, 0xe1, 0x00, 0x08, 0x67, 0x42, 0x00, 0x1e, 0xda, 0x02, 0xd0,
@@ -191,9 +191,9 @@ describe('injectMp4Metadata', () => {
       injectMp4Metadata(await buildTinyMp4(), {
         chapters: [],
         title: 'Beach day',
-        description: `3 clips · 24s\nMade with Kody Video — ${KODY_VIDEO_SITE}`,
-        comment: '3 clips · 24s · kody.video',
-        encoder: KODY_VIDEO_ENCODER,
+        description: `3 clips · 24s\nMade with Clipcam`,
+        comment: '3 clips · 24s · Clipcam',
+        encoder: APP_ENCODER,
         date: '2026-08-08',
       }),
     )
@@ -204,11 +204,11 @@ describe('injectMp4Metadata', () => {
     const end = udta!.offset + udta!.size
     expect(readUdtaString(out, findBox(out, fourCC('\xa9nam'), start, end)!)).toBe('Beach day')
     expect(readUdtaString(out, findBox(out, fourCC('\xa9cmt'), start, end)!)).toBe(
-      '3 clips · 24s · kody.video',
+      '3 clips · 24s · Clipcam',
     )
-    expect(readUdtaString(out, findBox(out, fourCC('\xa9too'), start, end)!)).toBe(KODY_VIDEO_ENCODER)
+    expect(readUdtaString(out, findBox(out, fourCC('\xa9too'), start, end)!)).toBe(APP_ENCODER)
     expect(readUdtaString(out, findBox(out, fourCC('\xa9day'), start, end)!)).toBe('2026-08-08')
-    expect(readUdtaString(out, findBox(out, fourCC('\xa9des'), start, end)!)).toContain(KODY_VIDEO_SITE)
+    expect(readUdtaString(out, findBox(out, fourCC('\xa9des'), start, end)!)).toContain('Made with Clipcam')
     expect(findBox(out, fourCC('\xa9xyz'), start, end)).toBeNull()
     expect(findBox(out, fourCC('chpl'), start, end)).toBeNull()
   })
@@ -257,8 +257,8 @@ describe('injectMp4Metadata', () => {
       ],
       location,
       title: 'Beach day',
-      comment: '2 clips · 4s · kody.video',
-      encoder: KODY_VIDEO_ENCODER,
+      comment: '2 clips · 4s · Clipcam',
+      encoder: APP_ENCODER,
     })
 
     // ffmpeg runs on the Vitest server (Node), not in the browser — see
@@ -271,7 +271,7 @@ describe('injectMp4Metadata', () => {
     expect(stderr).toMatch(/Chapters/i)
     expect(stderr).toContain(title)
     expect(stderr).toMatch(/\+37\.7749-122\.4194\//)
-    expect(stderr).toContain('kody.video')
+    expect(stderr).toContain('Clipcam')
     expect(stderr).toContain('Beach day')
   })
 })
