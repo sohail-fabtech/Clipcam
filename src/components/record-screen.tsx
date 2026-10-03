@@ -86,10 +86,6 @@ interface RecordScreenProps {
   /** True while no clip has locked the orientation yet: on phones/tablets
    * the interface follows the device, and the first take decides. */
   orientationUnlocked: boolean
-  /** Kody Video Plus unlocked (landscape projects are a Plus perk). */
-  plus: boolean
-  /** Open the Plus upsell sheet (location tagging and other Plus perks). */
-  onUpsell: () => void
   onOpenEditor: () => void
   onOpenExport: () => void
   onPlay: () => void
@@ -176,7 +172,7 @@ export function RecordScreen(handle: Handle<RecordScreenProps>) {
   let micSilent = false
   /** Bottom sheet for choosing which microphone records takes. */
   let micPickerOpen = false
-  let locationTagging = props.plus && (props.locationTaggingEnabled ?? false)
+  let locationTagging = props.locationTaggingEnabled ?? false
 
   const screenRecordingSupported = isScreenRecordingSupported()
 
@@ -461,7 +457,7 @@ export function RecordScreen(handle: Handle<RecordScreenProps>) {
       }
       // Fire-and-forget GPS for this take — must not delay recording start.
       pendingFix = null
-      if (props.plus && locationTagging) {
+      if (locationTagging) {
         pendingFix = getLocationFix()
       }
       acquireWakeLock()
@@ -1384,18 +1380,16 @@ export function RecordScreen(handle: Handle<RecordScreenProps>) {
             >
               <IconTimer />
             </button>
-            {props.plus ? (
-              <button
-                type="button"
-                className={`btn-icon${locationTagging ? ' is-active' : ''}`}
-                aria-label="Toggle location tagging"
-                aria-pressed={locationTagging}
-                disabled={recording || countdown !== null}
-                mix={on('click', toggleLocationTagging)}
-              >
-                <IconLocation />
-              </button>
-            ) : null}
+            <button
+              type="button"
+              className={`btn-icon${locationTagging ? ' is-active' : ''}`}
+              aria-label="Toggle location tagging"
+              aria-pressed={locationTagging}
+              disabled={recording || countdown !== null}
+              mix={on('click', toggleLocationTagging)}
+            >
+              <IconLocation />
+            </button>
             <button
               type="button"
               className="btn-icon"
