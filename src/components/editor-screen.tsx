@@ -17,7 +17,6 @@ import {
   trimClip,
   undoLastDelete,
 } from '../lib/project-actions'
-import { PlusRequiredError } from '../lib/storage'
 import { downloadClipFile } from '../lib/media'
 import { resolveSplitMs } from '../lib/clip-edit'
 import { clipIdAfterDelete } from '../lib/clip-selection'
@@ -65,10 +64,6 @@ interface EditorScreenProps {
   clips: ClipRecord[]
   /** Background-music track for the project (null when none is set). */
   audio: ProjectAudioRecord | null
-  /** Kody Video Plus unlocked (background music is a Plus perk). */
-  plus: boolean
-  /** Open the Plus upsell sheet. */
-  onUpsell: () => void
   canUndo: boolean
   /** True while a full-screen overlay owns input (playback, export, …). */
   interactionLocked: boolean
@@ -99,21 +94,9 @@ export function EditorScreen(handle: Handle<EditorScreenProps>) {
   const previewApi: { current: EditorClipPreviewHandle | null } = { current: null }
 
   const chooseFilmOrientation = async (orientation: ProjectOrientation) => {
-    if (orientation === 'landscape' && !props.plus) {
-      props.onUpsell()
-      return
-    }
-    try {
-      const projectId = await props.ensureProjectId()
-      await setFilmOrientation(projectId, orientation)
-      await props.refresh()
-    } catch (error) {
-      if (error instanceof PlusRequiredError) {
-        props.onUpsell()
-        return
-      }
-      throw error
-    }
+    const projectId = await props.ensureProjectId()
+    await setFilmOrientation(projectId, orientation)
+    await props.refresh()
   }
 
   const visibleClips = (loaded: ClipRecord[]): ClipRecord[] => {
@@ -633,8 +616,6 @@ export function EditorScreen(handle: Handle<EditorScreenProps>) {
               selectedIndex={selectedIndex}
               projectDurationMs={totalDurationMs}
               disabled={importing}
-              plus={props.plus}
-              onUpsell={props.onUpsell}
               onEditTrack={(trackId) => {
                 previewApi.current?.pause()
                 trimming = false
