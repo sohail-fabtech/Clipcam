@@ -19,13 +19,7 @@ interface ExportSheetProps {
   fileSizeBytes: number | null
   /** Feedback after a share/save action ("Saved to downloads", …). */
   notice: string | null
-  /** True when THIS export was stamped with the Kody Video mark. */
-  watermarked: boolean
-  /** True when the removal purchase is unlocked (may change mid-sheet). */
-  purchased: boolean
-  /** Plus opt-in: keep stamping the mark on future exports. */
-  keepWatermark: boolean
-  /** Plus opt-in: include captured coordinates in future MP4 exports. */
+  /** Opt-in: include captured coordinates in future MP4 exports. */
   includeLocation: boolean
   /** Whether THIS exported file contains captured coordinates. */
   locationIncluded: boolean
@@ -43,14 +37,11 @@ interface ExportSheetProps {
   /** True when the name is still the generated "Project N". */
   nameIsDefault: boolean
   onRename: (name: string) => void
-  onKeepWatermarkChange: (keep: boolean) => void
   onIncludeLocationChange: (include: boolean) => void
   onShare: () => void
   onSave: () => void
   onSaveClips: () => void
   onSaveBackup: () => void
-  onRemoveWatermark: () => void
-  onRestorePurchase: () => void
   onRetry: () => void
   /** Fresh render, bypassing the persisted last-export cache. */
   onReExport: () => void
@@ -80,23 +71,17 @@ export function ExportSheet(handle: Handle<ExportSheetProps>) {
       fileExtension,
       fileSizeBytes,
       notice,
-      watermarked,
-      purchased,
-      keepWatermark,
       includeLocation,
       locationIncluded,
       hasTaggedClips,
       usedFallback,
       busy,
       nameIsDefault,
-      onKeepWatermarkChange,
       onIncludeLocationChange,
       onShare,
       onSave,
       onSaveClips,
       onSaveBackup,
-      onRemoveWatermark,
-      onRestorePurchase,
       onRetry,
       onReExport,
       onClose,
@@ -230,39 +215,7 @@ export function ExportSheet(handle: Handle<ExportSheetProps>) {
                   Re-export from scratch
                 </button>
               </p>
-              {watermarked && !purchased ? (
-                <p className="watermark-note">
-                  Includes a small Kody mark in the corner.{' '}
-                  <button
-                    type="button"
-                    className="link-button"
-                    mix={on('click', () => onRemoveWatermark())}
-                  >
-                    Get Plus — $0.99 removes it & unlocks 6 projects
-                  </button>{' '}
-                  ·{' '}
-                  <button
-                    type="button"
-                    className="link-button"
-                    mix={on('click', () => onRestorePurchase())}
-                  >
-                    Already paid?
-                  </button>
-                </p>
-              ) : null}
-              {purchased ? (
-                <div className="export-prefs">
-                  <label className="export-pref-toggle">
-                    <input
-                      type="checkbox"
-                      checked={keepWatermark}
-                      disabled={busy}
-                      mix={on('change', (event) => {
-                        onKeepWatermarkChange((event.currentTarget as HTMLInputElement).checked)
-                      })}
-                    />
-                    Keep the Kody mark on exports
-                  </label>
+              <div className="export-prefs">
                   <label className="export-pref-toggle">
                     <input
                       type="checkbox"
@@ -276,17 +229,6 @@ export function ExportSheet(handle: Handle<ExportSheetProps>) {
                     />
                     Include clip locations in MP4 exports
                   </label>
-                  {watermarked && !keepWatermark ? (
-                    <p className="export-pref-note">
-                      This video still includes the Kody mark — tap Re-export from scratch for a
-                      clean export.
-                    </p>
-                  ) : null}
-                  {!watermarked && keepWatermark ? (
-                    <p className="export-pref-note">
-                      Tap Re-export from scratch to stamp the Kody mark on this video.
-                    </p>
-                  ) : null}
                   {locationIncluded && !includeLocation ? (
                     <p className="export-pref-note">
                       This video still includes clip locations — tap Re-export from scratch to
@@ -302,13 +244,12 @@ export function ExportSheet(handle: Handle<ExportSheetProps>) {
                     </p>
                   ) : null}
                   <p className="export-location-note">
-                    Location is off by default. MP4 exports credit kody.video and note the clip
+                    Location is off by default. MP4 exports credit Clipcam and note the clip
                     count — never where you filmed, unless you turn this on. Share and Save stamp
                     the file date from the last clip so Photos apps can sort. Chapter markers stay
                     in the video either way.
                   </p>
                 </div>
-              ) : null}
             </>
           ) : null}
 
