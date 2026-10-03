@@ -1,6 +1,6 @@
 import { IconBack } from '../components/icons'
 
-/** Plain-language terms of use for on-device Kody Video. */
+/** Plain-language terms of use for on-device Clipcam. */
 export function TermsPage() {
   return () => (
     <div className="screen about-screen">
@@ -14,12 +14,13 @@ export function TermsPage() {
 
       <div className="about-body">
         <h1>Terms</h1>
-        <p className="legal-updated">Last updated: August 2026</p>
+        <p className="legal-updated">Last updated: October 2026</p>
 
         <section className="about-section">
           <h2>Free to use, as is</h2>
           <p>
-            Kody Video is free to use and runs entirely on your device. It is provided &ldquo;as
+            Clipcam is free to use — every feature, with no subscription, purchase, or watermark —
+            and runs entirely on your device. It is provided &ldquo;as
             is&rdquo; without warranty of any kind. Use it at your own risk — always keep copies of
             recordings you care about. Device storage can be cleared by the browser or OS.
           </p>
@@ -29,20 +30,6 @@ export function TermsPage() {
           <h2>Your recordings are yours</h2>
           <p>
             You own your recordings entirely. The app claims no rights to any of your content.
-          </p>
-        </section>
-
-        <section className="about-section">
-          <h2>Kody Video Plus</h2>
-          <p>
-            Kody Video Plus is a one-time $0.99 purchase that unlocks watermark-free exports,
-            1080p High quality recording, optional location tagging, sending a project to another
-            device, and up to six project slots (the free plan includes one project and records at
-            720p) for the browser profile where it&rsquo;s verified. You can restore the purchase
-            on another device with a short code or QR from the device that already has Plus.
-            Payments are handled by Stripe.
-            For refunds or purchase trouble, email{' '}
-            <a href="mailto:team@kody.video">team@kody.video</a>.
           </p>
         </section>
 
@@ -57,22 +44,20 @@ export function TermsPage() {
         <section className="about-section">
           <h2>Liability</h2>
           <p>
-            Liability is limited to the amount you paid for the app — at most $0.99.
+            Clipcam is free, and to the extent the law allows, its authors are not liable for any
+            loss arising from its use.
           </p>
         </section>
 
         <section className="about-section">
           <h2>Changes &amp; affiliation</h2>
           <p>
-            These terms may change with the app; they&rsquo;re versioned in the{' '}
-            <a
-              href="https://github.com/kentcdodds/kody-video"
-              target="_blank"
-              rel="noreferrer noopener"
-            >
-              open-source repo
+            These terms may change with the app; they&rsquo;re versioned with its open-source code.
+            Questions:{' '}
+            <a href="https://me.jscrate.dev" target="_blank" rel="noreferrer noopener">
+              me.jscrate.dev
             </a>
-            . Kody Video is not affiliated with OK Video.
+            . Clipcam is not affiliated with OK Video.
           </p>
         </section>
 

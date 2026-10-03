@@ -12,7 +12,7 @@ import {
   reconcileUpdateCheckResult,
   type UpdateDiagEvent,
 } from '../lib/app-update'
-import { buildDateLabel, COMMIT_SHA, commitUrl, shortVersion } from '../lib/build-info'
+import { buildDateLabel, COMMIT_SHA, shortVersion } from '../lib/build-info'
 import { reportError } from '../lib/error-reporting'
 import { clearExportCache, estimateExportCacheBytes } from '../lib/export/export-cache'
 import { listRearCameras } from '../lib/media'
@@ -41,22 +41,14 @@ import {
 import { resolveVideoQuality, type VideoQualityPreset } from '../lib/video-quality'
 import { navigate } from '../router'
 
-/** Prefilled GitHub issue so bug reports arrive with device context attached. */
-function reportProblemUrl(): string {
-  const body = [
-    '## What happened?',
-    '',
-    '(describe the problem — what you tapped, what you expected, what you got)',
-    '',
-    '## Device info (auto-filled)',
-    '',
+/** Device context to paste into a bug report. */
+function deviceReport(): string {
+  return [
     `- App URL: ${location.origin}`,
     `- User agent: ${navigator.userAgent}`,
     `- Screen: ${window.screen.width}×${window.screen.height} @${window.devicePixelRatio}x`,
     `- Installed as app: ${window.matchMedia('(display-mode: standalone)').matches ? 'yes' : 'no'}`,
   ].join('\n')
-  const params = new URLSearchParams({ labels: 'bug', body })
-  return `https://github.com/kentcdodds/kody-video/issues/new?${params}`
 }
 
 function shortSha(sha: string | null): string {
@@ -368,7 +360,6 @@ export function AboutPage(handle: Handle) {
       })
     }
     const version = <code>{shortVersion()}</code>
-    const versionUrl = commitUrl()
     const diagReport = updateDiagnosticsReport(deployedCommit, deployedKnown)
     return (
       <div className="screen about-screen">
@@ -384,93 +375,55 @@ export function AboutPage(handle: Handle) {
           <div className="about-hero" aria-hidden="true">
             <BrandMark size={96} className="brand-hero-art" variant="icon" />
           </div>
-          <h1>
-            Kody <span>Video</span>
-          </h1>
+          <h1>Clipcam</h1>
 
           <section className="about-section">
             <h2>Free &amp; open source</h2>
             <p>
-              Kody Video is open source — the whole app, including the export engine, lives at{' '}
+              Every feature is free — six projects, 1080p, music, landscape, location, and Send to
+              device — with no subscription, no purchase, and no watermark on your videos. Clipcam
+              is open source and made by Sohail Khan (
+              <a href="https://me.jscrate.dev" target="_blank" rel="noreferrer noopener">
+                me.jscrate.dev
+              </a>
+              ).
+            </p>
+          </section>
+
+          <section className="about-section">
+            <h2>Credits</h2>
+            <p>
+              Clipcam is built on{' '}
               <a
                 href="https://github.com/kentcdodds/kody-video"
                 target="_blank"
                 rel="noreferrer noopener"
               >
-                github.com/kentcdodds/kody-video
-              </a>
-              . Issues, ideas, and pull requests are welcome.
-            </p>
-          </section>
-
-          <section className="about-section">
-            <h2>See it in action</h2>
-            <p>
-              Kent demos the whole flow — record, arrange, share — in a minute and a half:{' '}
-              <a
-                href="https://youtube.com/shorts/JaUdPTHHk7A"
-                target="_blank"
-                rel="noreferrer noopener"
-              >
-                watch the tour on YouTube
-              </a>
-              . The same video plays right on the home screen when you&rsquo;re new here. Want a
-              real result straight out of the app? Here&rsquo;s{' '}
-              <a
-                href="https://x.com/kentcdodds/status/2084891368724533456"
-                target="_blank"
-                rel="noreferrer noopener"
-              >
-                a video Kent made with Kody Video
-              </a>
-              .
-            </p>
-          </section>
-
-          <section className="about-section">
-            <h2>Inspired by OK Video</h2>
-            <p>
-              This app exists because of{' '}
+                Kody Video
+              </a>{' '}
+              by Kent C. Dodds. Its hold-to-record interaction model is inspired by{' '}
               <a href="https://okvideo.app" target="_blank" rel="noreferrer noopener">
                 OK Video
               </a>{' '}
-              by Pim Coumans — a wonderful hold-to-record clips camera for iPhone and a heavy source
-              of inspiration for Kody Video&rsquo;s whole interaction model. If you&rsquo;re on iOS,
-              go get the real thing. Kody Video is an independent project and is not affiliated with
-              OK Video.
-            </p>
-          </section>
-
-          <section className="about-section">
-            <h2>Kody the koala</h2>
-            <p>
-              The mascot comes from the KCD community —{' '}
-              <a href="https://kentcdodds.com/kody" target="_blank" rel="noreferrer noopener">
-                kentcdodds.com/kody
-              </a>
-              .
+              by Pim Coumans — a wonderful clips camera for iPhone. Clipcam is an independent
+              project and is not affiliated with either.
             </p>
           </section>
 
           <section className="about-section">
             <h2>Private by design</h2>
             <p>
-              No accounts, no uploads, no cross-site tracking. Clips live in this browser&rsquo;s
+              No accounts, no uploads, no analytics, no tracking. Clips live in this browser&rsquo;s
               storage until you export and share them yourself. The app&rsquo;s only own network
-              traffic: anonymous crash reports (error and stack trace only — never your media) when
-              something breaks, cookieless page-view counts via Fathom Analytics, the tour video
-              streaming from this app&rsquo;s own domain if you tap play on it, and — only if you
-              tap Send to device — a short-lived matchmaking room so two browsers can find each
-              other, and — only
-              if you tap Send under Recording health — that counters-only recording report. Clips
-              still never upload.
+              traffic is a short-lived matchmaking room so two browsers can find each other — and
+              only when you tap Send to device. Clips never upload.
             </p>
           </section>
 
           <section className="about-section">
             <h2>Made for phones</h2>
             <p>
-              Kody Video is designed as a mobile camera app — install it on your phone for the real
+              Clipcam is designed as a mobile camera app — install it on your phone for the real
               experience. It works on desktop too, with keyboard support: hold <kbd>Space</kbd> to
               record, <kbd>F</kbd> flips the camera, <kbd>T</kbd> starts the self-timer,{' '}
               <kbd>E</kbd> opens the editor, <kbd>P</kbd> plays your cut, and <kbd>Delete</kbd>{' '}
@@ -568,7 +521,7 @@ export function AboutPage(handle: Handle) {
               <p className="storage-other-note">
                 About {formatBytes(breakdown.otherBytes)} isn&rsquo;t part of any project. That is
                 usually space the browser hasn&rsquo;t released yet from earlier recordings and
-                clip edits &mdash; it frees it once Kody Video fully closes. Close the app
+                clip edits &mdash; it frees it once Clipcam fully closes. Close the app
                 completely (swipe it away, and close the browser if it stays open), then reopen it.
               </p>
             ) : null}
@@ -582,11 +535,12 @@ export function AboutPage(handle: Handle) {
           <section className="about-section">
             <h2>Backups</h2>
             <p>
-              Every project can be saved as a single <code>.kodyvideo</code> file (⋯ →{' '}
+              Every project can be saved as a single <code>.clipcam</code> file (⋯ →{' '}
               <strong>Save backup</strong> on the home screen) — a safety net, and the way to move
               a project between devices. You can also <strong>Send to device</strong> over the
               local network (the other device opens{' '}
-              <a href="/receive">kody.video/receive</a>). Restore a backup here, or drop the file
+              <a href="/receive">/receive</a>). Restore a backup here (older{' '}
+              <code>.kodyvideo</code> files work too), or drop the file
               anywhere in the app:
             </p>
             <div className="about-import-row">
@@ -594,7 +548,7 @@ export function AboutPage(handle: Handle) {
                 Import a backup
                 <input
                   type="file"
-                  accept=".kodyvideo,application/octet-stream"
+                  accept=".clipcam,.kodyvideo,application/octet-stream"
                   className="visually-hidden"
                   disabled={importing}
                   mix={on('change', (event) => {
@@ -643,26 +597,19 @@ export function AboutPage(handle: Handle) {
           <section className="about-section">
             <h2>Support</h2>
             <p>
-              Hit a bug? Please{' '}
-              <a href={reportProblemUrl()} target="_blank" rel="noreferrer noopener">
-                open an issue on GitHub
+              Hit a bug or have an idea? Reach Sohail Khan at{' '}
+              <a href="https://me.jscrate.dev" target="_blank" rel="noreferrer noopener">
+                me.jscrate.dev
               </a>{' '}
-              — the link pre-fills your device details so you only have to describe what went wrong.
-              Prefer email (or need help with a purchase)? Write to{' '}
-              <a href="mailto:team@kody.video">team@kody.video</a>.
+              and paste these device details so the problem is easy to reproduce:
             </p>
+            <pre className="camera-report">{deviceReport()}</pre>
           </section>
 
           <section className="about-section">
             <h2>Version</h2>
             <p>
-              {versionUrl ? (
-                <a href={versionUrl} target="_blank" rel="noreferrer noopener">
-                  {version}
-                </a>
-              ) : (
-                version
-              )}{' '}
+              {version}{' '}
               · built {buildDateLabel()}
               {' · '}
               <button

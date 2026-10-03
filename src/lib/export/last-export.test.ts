@@ -18,43 +18,43 @@ function fakeClip(id: string): ClipRecord {
 describe('exportSignature', () => {
   it('signs absent and portrait orientations identically', () => {
     const clips = [fakeClip('clip_a')]
-    expect(exportSignature(clips, true, null, 'portrait')).toBe(
-      exportSignature(clips, true, null),
+    expect(exportSignature(clips, null, 'portrait')).toBe(
+      exportSignature(clips, null),
     )
-    expect(exportSignature(clips, true, null, undefined)).toBe(
-      exportSignature(clips, true, null),
+    expect(exportSignature(clips, null, undefined)).toBe(
+      exportSignature(clips, null),
     )
-    expect(JSON.parse(exportSignature(clips, true, null, 'portrait')).orientation).toBe(
+    expect(JSON.parse(exportSignature(clips, null, 'portrait')).orientation).toBe(
       'portrait',
     )
   })
 
   it('signs landscape differently so the cached export re-renders', () => {
     const clips = [fakeClip('clip_a')]
-    expect(exportSignature(clips, true, null, 'landscape')).not.toBe(
-      exportSignature(clips, true, null, 'portrait'),
+    expect(exportSignature(clips, null, 'landscape')).not.toBe(
+      exportSignature(clips, null, 'portrait'),
     )
   })
 
   it('signs location inclusion differently so a cached geotag is never reused', () => {
     const clips = [fakeClip('clip_a')]
-    expect(exportSignature(clips, false, null, 'portrait', true)).not.toBe(
-      exportSignature(clips, false, null, 'portrait', false),
+    expect(exportSignature(clips, null, 'portrait', true)).not.toBe(
+      exportSignature(clips, null, 'portrait', false),
     )
   })
 
   it('signs the project title so a rename cannot reuse the old file metadata', () => {
     const clips = [fakeClip('clip_a')]
-    expect(exportSignature(clips, false, null, 'portrait', false, 'Beach day')).not.toBe(
-      exportSignature(clips, false, null, 'portrait', false, 'Road trip'),
+    expect(exportSignature(clips, null, 'portrait', false, 'Beach day')).not.toBe(
+      exportSignature(clips, null, 'portrait', false, 'Road trip'),
     )
   })
 
   it('signs letterbox so a fit change cannot reuse a cropped export', () => {
     const cropped = [fakeClip('clip_a')]
     const letterboxed = [{ ...fakeClip('clip_a'), fit: 'letterbox' as const }]
-    expect(exportSignature(letterboxed, false, null, 'portrait')).not.toBe(
-      exportSignature(cropped, false, null, 'portrait'),
+    expect(exportSignature(letterboxed, null, 'portrait')).not.toBe(
+      exportSignature(cropped, null, 'portrait'),
     )
   })
 })
