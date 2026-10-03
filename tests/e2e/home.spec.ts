@@ -259,7 +259,7 @@ test.describe('home & app shell', () => {
   test('camera inspector reports what the browser exposes', async ({ page }) => {
     await page.goto('/about')
     await page.getByRole('button', { name: 'Inspect cameras' }).click()
-    const report = page.locator('.camera-report')
+    const report = page.locator('.camera-report:not(.device-report)')
     await expect(report).toBeVisible()
     await expect(report).toContainText('Active camera:')
     await expect(report).toContainText(/Detected rear lenses: \d+/)
