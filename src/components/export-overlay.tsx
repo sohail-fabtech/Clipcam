@@ -4,12 +4,6 @@ import { on, ref } from 'remix/component'
 interface ExportOverlayProps {
   projectName: string
   progress: number
-  /**
-   * True when this export stamps the Kody mark. Engines draw it onto every
-   * encoded frame before mirroring to the preview canvas, so the live
-   * preview matches the final video.
-   */
-  watermarked: boolean
   /** True when this run will write captured coordinates into the MP4. */
   locationIncluded: boolean
   /**
@@ -17,15 +11,12 @@ interface ExportOverlayProps {
    * Shows a dismissible compatibility notice (session-only; resets next export).
    */
   usedFallback: boolean
-  /** Plus unlocked — mark/location prefs can change mid-export. */
-  purchased: boolean
-  keepWatermark: boolean
+  /** Location pref can change mid-export (restarts the run). */
   includeLocation: boolean
   hasTaggedClips: boolean
   /** Bound to the canvas the export engines mirror sampled frames onto. */
   bindPreviewCanvas: (canvas: HTMLCanvasElement | null) => void
   onStop: () => void
-  onKeepWatermarkChange: (keep: boolean) => void
   onIncludeLocationChange: (include: boolean) => void
 }
 
@@ -41,23 +32,16 @@ export function ExportOverlay(handle: Handle<ExportOverlayProps>) {
     const {
       projectName,
       progress,
-      watermarked,
       locationIncluded,
       usedFallback,
-      purchased,
-      keepWatermark,
       includeLocation,
       hasTaggedClips,
       onStop,
-      onKeepWatermarkChange,
       onIncludeLocationChange,
     } = handle.props
     const percent = Math.round(progress * 100)
     const showFallbackNotice = usedFallback && !fallbackNoticeDismissed
-    const statusBits = [
-      watermarked ? 'includes the Kody mark' : null,
-      locationIncluded ? 'includes clip locations' : null,
-    ].filter((bit): bit is string => bit !== null)
+    const statusBits = locationIncluded ? ['includes clip locations'] : []
     return (
       <div
         className="export-overlay"
@@ -116,18 +100,8 @@ export function ExportOverlay(handle: Handle<ExportOverlayProps>) {
           <p className="export-percent" aria-live="polite">
             {percent}%
           </p>
-          {purchased ? (
+          {hasTaggedClips ? (
             <div className="export-overlay-prefs">
-              <label className="export-pref-toggle">
-                <input
-                  type="checkbox"
-                  checked={keepWatermark}
-                  mix={on('change', (event) => {
-                    onKeepWatermarkChange((event.currentTarget as HTMLInputElement).checked)
-                  })}
-                />
-                Keep the Kody mark on exports
-              </label>
               <label className="export-pref-toggle">
                 <input
                   type="checkbox"
@@ -138,15 +112,9 @@ export function ExportOverlay(handle: Handle<ExportOverlayProps>) {
                 />
                 Include clip locations in MP4 exports
               </label>
-              {hasTaggedClips ? (
-                <p className="export-overlay-pref-hint muted">
-                  Changing a setting stops this export and starts a new one.
-                </p>
-              ) : (
-                <p className="export-overlay-pref-hint muted">
-                  Changing the mark setting stops this export and starts a new one.
-                </p>
-              )}
+              <p className="export-overlay-pref-hint muted">
+                Changing this stops the export and starts a new one.
+              </p>
             </div>
           ) : null}
           <button
