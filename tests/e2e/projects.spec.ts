@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import { test, expect, type Page } from '@playwright/test'
-import { gotoHome, seedProject, unlockPlus } from './helpers'
+import { gotoHome, seedProject } from './helpers'
 
 async function createProjectWithClip(page: Page): Promise<void> {
   await seedProject(page, { clips: 1 })
@@ -164,7 +164,6 @@ test.describe('project slots', () => {
 
   test('slot order is stable after opening a project', async ({ page }) => {
     await gotoHome(page)
-    await unlockPlus(page)
     await page.evaluate(async () => {
       const storage = await import('/src/lib/storage.ts')
       await storage.createProject('First')

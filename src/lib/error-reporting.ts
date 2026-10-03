@@ -88,7 +88,6 @@ export function isProjectLimitEvent(event: FilterableSentryEvent): boolean {
   for (const value of exceptionValues) {
     if (value.type === 'ProjectLimitError') return true
     const text = value.value ?? ''
-    if (text.includes('The free plan includes 1 project')) return true
     if (/^Project limit reached \(\d+\)/.test(text)) return true
   }
   return false

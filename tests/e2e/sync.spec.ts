@@ -1,18 +1,8 @@
 import { test, expect } from '@playwright/test'
-import { seedProject, unlockPlus } from './helpers'
+import { seedProject } from './helpers'
 
 test.describe('send to device', () => {
-  test('free plan opens Plus upsell from Send to device', async ({ page }) => {
-    await seedProject(page, { clips: 1, name: 'Family' })
-    await page.goto('/')
-    await page.locator('.slot-options').click()
-    await page.getByRole('button', { name: 'Send to device' }).click()
-    const upsell = page.getByRole('dialog', { name: 'Kody Video Plus' })
-    await expect(upsell).toBeVisible()
-    await expect(upsell).toContainText(/sending a project to another device/i)
-  })
-
-  test('Plus send copies a project to another browser over WebRTC', async ({
+  test('send copies a project to another browser over WebRTC', async ({
     page,
     browser,
     baseURL,
@@ -21,7 +11,6 @@ test.describe('send to device', () => {
     const receiver = await receiverContext.newPage()
     try {
       await seedProject(page, { clips: 1, name: 'Lan trip' })
-      await unlockPlus(page)
       await page.goto('/')
       await expect(page.locator('.project-slot.filled')).toContainText('Lan trip')
       await page.locator('.slot-options').click()

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import { gotoHome, seedProject, unlockPlus } from './helpers'
+import { gotoHome, seedProject } from './helpers'
 
 function listExportCache(page: Page): Promise<string[]> {
   return page.evaluate(async () => {
@@ -38,7 +38,6 @@ async function seedReferencedExportCache(page: Page, sizeBytes: number): Promise
           fileExtension: 'mp4',
           createdAt: Date.now(),
           signature: 'e2e-seeded',
-          watermarked: true,
         },
       })
     },
@@ -139,17 +138,13 @@ test.describe('storage management', () => {
     )
   })
 
-  test('about page defaults free quality to Standard and persists Saver', async ({ page }) => {
+  test('about page defaults quality to High and persists Saver', async ({ page }) => {
     await page.goto('/about')
     const section = page.locator('#video-quality')
-    await expect(section.getByRole('radio', { name: 'Standard' })).toBeEnabled()
-    await expect(section.getByRole('radio', { name: 'Standard' })).toHaveAttribute(
+    await expect(section.getByRole('radio', { name: 'High' })).toHaveAttribute(
       'aria-checked',
       'true',
     )
-    await section.getByRole('radio', { name: 'High (Kody Video Plus)' }).click()
-    await expect(page.getByRole('dialog', { name: 'Kody Video Plus' })).toBeVisible()
-    await page.getByRole('button', { name: 'Not now' }).click()
 
     await section.getByRole('radio', { name: 'Saver' }).click()
     await expect(section.getByRole('radio', { name: 'Saver' })).toHaveAttribute(
@@ -170,33 +165,6 @@ test.describe('storage management', () => {
       'aria-checked',
       'true',
     )
-  })
-
-  test('Plus can pick High video quality', async ({ page }) => {
-    await gotoHome(page)
-    await unlockPlus(page)
-    await page.goto('/about')
-    const section = page.locator('#video-quality')
-    await expect(section.getByRole('radio', { name: 'High' })).toBeEnabled()
-    await expect(section.getByRole('radio', { name: 'High' })).toHaveAttribute(
-      'aria-checked',
-      'true',
-    )
-    await expect(section.getByRole('radio', { name: 'High (Kody Video Plus)' })).toHaveCount(0)
-    await section.getByRole('radio', { name: 'Standard' }).click()
-    await expect(section.getByRole('radio', { name: 'Standard' })).toHaveAttribute(
-      'aria-checked',
-      'true',
-    )
-    await section.getByRole('radio', { name: 'High' }).click()
-    await expect
-      .poll(async () =>
-        page.evaluate(async () => {
-          const storage = await import('/src/lib/storage.ts')
-          return (await storage.getSettings()).videoQuality ?? null
-        }),
-      )
-      .toBe('high')
   })
 
   test('about page shows cache size and clears it', async ({ page }) => {
