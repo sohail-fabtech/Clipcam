@@ -603,7 +603,7 @@ export function AboutPage(handle: Handle) {
               </a>{' '}
               and paste these device details so the problem is easy to reproduce:
             </p>
-            <pre className="camera-report">{deviceReport()}</pre>
+            <pre className="camera-report device-report">{deviceReport()}</pre>
           </section>
 
           <section className="about-section">
