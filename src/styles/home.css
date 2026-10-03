@@ -281,14 +281,6 @@
     color-mix(in srgb, var(--ink) 5%, transparent);
 }
 
-.project-slot.empty.locked {
-  opacity: 0.55;
-}
-
-.project-slot.empty.locked strong {
-  color: var(--ink-muted);
-}
-
 .project-slot.empty:disabled {
   opacity: 0.45;
 }
@@ -718,12 +710,6 @@
   font-size: 0.88rem;
   background: color-mix(in srgb, var(--ink) 6%, transparent);
   color: var(--ink);
-}
-
-.video-quality-lock {
-  display: inline-flex;
-  line-height: 0;
-  opacity: 0.75;
 }
 
 .video-quality-option:disabled {

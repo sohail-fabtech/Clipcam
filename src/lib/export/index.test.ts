@@ -53,7 +53,6 @@ describe('exportProject fallback signaling', () => {
   it('calls onFallback once when WebCodecs is unavailable', async () => {
     const onFallback = vi.fn()
     const result = await exportProject([clip()], {
-      watermark: false,
       onFallback,
     })
     expect(onFallback).toHaveBeenCalledTimes(1)
@@ -68,7 +67,6 @@ describe('exportProject fallback signaling', () => {
     vi.mocked(exportWithWebCodecs).mockRejectedValue(new Error('encode boom'))
     const onFallback = vi.fn()
     const result = await exportProject([clip()], {
-      watermark: false,
       onFallback,
     })
     expect(exportWithWebCodecs).toHaveBeenCalledTimes(1)
@@ -89,7 +87,6 @@ describe('exportProject fallback signaling', () => {
     // Silence verification needs no audible input peak — leave diagnostics empty.
     const onFallback = vi.fn()
     const result = await exportProject([clip()], {
-      watermark: false,
       onFallback,
     })
     expect(onFallback).not.toHaveBeenCalled()
@@ -102,7 +99,7 @@ describe('exportProject fallback signaling', () => {
     const controller = new AbortController()
     controller.abort()
     await expect(
-      exportProject([clip()], { watermark: false, signal: controller.signal }),
+      exportProject([clip()], { signal: controller.signal }),
     ).rejects.toBeInstanceOf(ExportCancelledError)
     expect(exportWithWebCodecs).not.toHaveBeenCalled()
     expect(exportRealtime).not.toHaveBeenCalled()
@@ -121,7 +118,7 @@ describe('exportProject fallback signaling', () => {
       throw new Error('unreachable')
     })
     const controller = new AbortController()
-    const pending = exportProject([clip()], { watermark: false, signal: controller.signal })
+    const pending = exportProject([clip()], { signal: controller.signal })
     controller.abort()
     await expect(pending).rejects.toBeInstanceOf(ExportCancelledError)
     expect(exportRealtime).not.toHaveBeenCalled()

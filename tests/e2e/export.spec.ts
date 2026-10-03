@@ -3,7 +3,6 @@ import {
   gotoHome,
   openSeededProject,
   seedProject,
-  unlockPlus,
   waitForCameraReady,
 } from './helpers'
 
@@ -37,11 +36,8 @@ test.describe('Go / export', () => {
     await expect(nameField).toHaveValue('Project 1')
     await expect(sheet).toContainText(/Saves as project-1\.(mp4|webm)/i)
 
-    // Watermark upsell shows before purchase.
-    await expect(sheet).toContainText(/Get Plus/)
-    await expect(
-      sheet.getByRole('checkbox', { name: /Include clip locations/ }),
-    ).toHaveCount(0)
+    // No paywall or watermark upsell anywhere in the sheet.
+    await expect(sheet).not.toContainText(/Plus|\$0\.99|watermark/i)
 
     // Save stores the file locally.
     const downloadPromise = page.waitForEvent('download')
@@ -151,26 +147,22 @@ test.describe('Go / export', () => {
     await expect(page.locator('.go-button')).toBeVisible()
   })
 
-  test('Plus users can change mark and location settings during export', async ({ page }) => {
+  test('location setting can change during export', async ({ page }) => {
     const projectId = await seedProject(page, {
       clips: 3,
       clipMs: 4000,
       location: { lat: 40.41791, lng: -111.81496 },
     })
-    await unlockPlus(page)
     await page.goto(`/project/${projectId}`)
     await waitForCameraReady(page)
 
     await page.locator('.go-button').click()
     const overlay = page.getByRole('dialog', { name: 'Exporting video' })
     await expect(overlay).toBeVisible({ timeout: 10_000 })
-    const markToggle = overlay.getByRole('checkbox', { name: 'Keep the Kody mark on exports' })
     const locationToggle = overlay.getByRole('checkbox', {
       name: 'Include clip locations in MP4 exports',
     })
-    await expect(markToggle).toBeVisible()
     await expect(locationToggle).toBeVisible()
-    await expect(markToggle).not.toBeChecked()
     await expect(locationToggle).not.toBeChecked()
     await locationToggle.check()
     await expect(overlay).toContainText(/includes clip locations/i)
@@ -178,13 +170,12 @@ test.describe('Go / export', () => {
     await expect(overlay).toBeHidden()
   })
 
-  test('Plus users can opt location metadata into future MP4 exports', async ({ page }) => {
+  test('users can opt location metadata into future MP4 exports', async ({ page }) => {
     const projectId = await seedProject(page, {
       clips: 1,
       clipMs: 800,
       location: { lat: 40.41791, lng: -111.81496 },
     })
-    await unlockPlus(page)
     await page.goto(`/project/${projectId}`)
     await waitForCameraReady(page)
 
@@ -230,7 +221,7 @@ test.describe('Go / export', () => {
         })
       }
       const clips = await storage.getClipsForProject(project.id)
-      const result = await exportProject(clips, { watermark: false })
+      const result = await exportProject(clips, {})
 
       const decoded = await decodeBackgroundAudio(result.blob, 48000)
       if (!decoded) return null

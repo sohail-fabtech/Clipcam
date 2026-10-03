@@ -26,14 +26,12 @@ const LAST_EXPORT_PREFIX = 'last-export'
 /** Anything that changes the rendered output must change the signature. */
 export function exportSignature(
   clips: ClipRecord[],
-  watermarked: boolean,
   audio?: Pick<ProjectAudioRecord, 'tracks' | 'fadeIn' | 'fadeOut'> | null,
   orientation?: ProjectOrientation,
   includeLocation = false,
   projectName = '',
 ): string {
   return JSON.stringify({
-    watermarked,
     // Sign explicitly, including false, to invalidate legacy cached exports
     // that may contain location metadata before this privacy control existed.
     includeLocation,
@@ -91,7 +89,6 @@ export async function persistLastExport(args: {
   projectId: ProjectId
   result: ExportResult
   signature: string
-  watermarked: boolean
 }): Promise<void> {
   // Reserved against concurrent sweeps: the file being adopted/copied has
   // no committed metadata reference until the put below lands.
@@ -102,9 +99,8 @@ async function persistLastExportInner(args: {
   projectId: ProjectId
   result: ExportResult
   signature: string
-  watermarked: boolean
 }): Promise<void> {
-  const { projectId, result, signature, watermarked } = args
+  const { projectId, result, signature } = args
 
   // Adoption must verify the file is really there: between the export
   // finishing and this reservation being acquired there is a microscopic
@@ -145,7 +141,6 @@ async function persistLastExportInner(args: {
       fileExtension: result.fileExtension,
       createdAt: Date.now(),
       signature,
-      watermarked,
       locationIncluded: result.locationIncluded,
     },
   })
@@ -156,7 +151,6 @@ async function persistLastExportInner(args: {
 
 export interface RecoveredExport {
   result: ExportResult
-  watermarked: boolean
   createdAt: number
 }
 
@@ -180,7 +174,6 @@ export async function loadMatchingExport(
       fileExtension: last.fileExtension,
       locationIncluded: last.locationIncluded === true,
     },
-    watermarked: last.watermarked,
     createdAt: last.createdAt,
   }
 }

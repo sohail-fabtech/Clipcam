@@ -71,7 +71,7 @@ describe('isProjectLimitEvent', () => {
           values: [
             {
               type: 'ProjectLimitError',
-              value: 'The free plan includes 1 project — Kody Video Plus unlocks 6.',
+              value: 'Project limit reached (6). Delete a project to create another.',
             },
           ],
         },
@@ -87,7 +87,7 @@ describe('isProjectLimitEvent', () => {
             {
               type: 'Error',
               value:
-                'The free plan includes 1 project — Kody Video Plus unlocks 6 (and removes the watermark).',
+                'Project limit reached (6). Delete a project to create another.',
             },
           ],
         },

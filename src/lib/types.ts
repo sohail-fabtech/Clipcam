@@ -221,16 +221,8 @@ export interface AppMeta {
   onboardingDismissed: boolean
   /** Home-page "Watch the tour" card dismissed (first-timer teaser). */
   tourCardDismissed?: boolean
-  /** One-time Kody Video Plus purchase (verified via Stripe). */
-  watermarkRemoved?: boolean
-  purchaseSessionId?: string | null
   /**
-   * Plus opt-in: keep stamping the Kody mark on exports even after purchase.
-   * Default off — Plus removes the watermark unless the user chooses this.
-   */
-  keepWatermark?: boolean
-  /**
-   * Plus opt-in: include captured clip coordinates in MP4 metadata and
+   * Opt-in: include captured clip coordinates in MP4 metadata and
    * chapter titles, and filming dates in the file description. Default off
    * so a public share cannot disclose location or when it was filmed.
    */
@@ -238,9 +230,8 @@ export interface AppMeta {
   /** Opt-in: tag new clips with device location. */
   locationTaggingEnabled?: boolean
   /**
-   * Capture size/bitrate for new recordings. Missing/unknown = standard
-   * (720p) without Plus, high (1080p) with Plus. High requires Plus.
-   * Does not rewrite already-saved clips. Frame rate stays 30 either way.
+   * Capture size/bitrate for new recordings. Missing/unknown = high
+   * (1080p). Does not rewrite already-saved clips. Frame rate stays 30 either way.
    */
   videoQuality?: 'high' | 'standard' | 'saver'
   /** The persisted last export (OPFS-backed), recoverable after the share
@@ -254,16 +245,12 @@ export interface AppMeta {
     /** Fingerprint of clips, render settings, and export metadata choices
      * that produced the file — any difference means a fresh export is needed. */
     signature: string
-    watermarked: boolean
     /** Whether the cached file actually contains clip-location metadata. */
     locationIncluded?: boolean
   } | null
 }
 
 export const MAX_PROJECTS = 6
-
-/** Projects included without the Kody Video Plus purchase. */
-export const FREE_PROJECTS = 1
 
 /** Route id for a project that exists only as a URL until the first clip is
  * recorded — backing out of an empty "new project" leaves nothing behind. */

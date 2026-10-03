@@ -7,9 +7,6 @@ import { OnboardingOverlay } from '../components/onboarding-overlay'
 import { PlaybackOverlay } from '../components/playback-overlay'
 import { RecordScreen, type ToastAction } from '../components/record-screen'
 import { createCamera } from '../lib/camera'
-import { RestoreSheet } from '../components/restore-sheet'
-import { UpsellSheet } from '../components/upsell-sheet'
-import { REMOVE_WATERMARK_LINK, shouldWatermarkExports } from '../lib/entitlement'
 import { buildClipsZip } from '../lib/clips-zip'
 import { clearExportMarker, markExportStarted, reportError } from '../lib/error-reporting'
 import { exportProject, isExportCancelled, type ExportResult } from '../lib/export'
@@ -37,7 +34,6 @@ import {
   createProject,
   renameProject,
   setIncludeLocationInExports,
-  setKeepWatermark,
   setOnboardingDismissed,
 } from '../lib/storage'
 import { formatBytes, requestPersistentStorage } from '../lib/storage-space'
@@ -79,8 +75,6 @@ interface ExportUiState {
   result: ExportResult | null
   error: string | null
   notice: string | null
-  /** Whether THIS export was stamped (entitlement can change mid-sheet). */
-  watermarked: boolean
   /** Whether THIS MP4 export contains captured clip coordinates. */
   locationIncluded: boolean
   /** True once this run entered the realtime canvas fallback. */
@@ -119,8 +113,6 @@ export function ProjectPage(handle: Handle<ProjectPageProps>) {
   let playing = false
   let toast: ToastState | null = null
   let exportState: ExportUiState | null = null
-  let restoring = false
-  let upselling = false
   /** In-flight share/save COUNT (concurrent actions must not clear each
    * other's busy state) — the export sheet must not dismiss while > 0. */
   let exportActionCount = 0
@@ -196,8 +188,6 @@ export function ProjectPage(handle: Handle<ProjectPageProps>) {
           audio: null,
           canUndo: false,
           onboardingDismissed: true,
-          watermarkRemoved: false,
-          keepWatermark: false,
           includeLocationInExports: false,
           storage: null,
           locationTaggingEnabled: false,
@@ -247,7 +237,7 @@ export function ProjectPage(handle: Handle<ProjectPageProps>) {
     const project = data?.project
     if (!project) return 'portrait'
     if (orientationUnlocked() && isCoarsePointerDevice()) {
-      if (viewportIsLandscape() && data?.watermarkRemoved) return 'landscape'
+      if (viewportIsLandscape()) return 'landscape'
       return 'portrait'
     }
     return projectOrientation(project)
@@ -358,18 +348,15 @@ export function ProjectPage(handle: Handle<ProjectPageProps>) {
     const unlockClip = clips.find((clip) => !isImageClip(clip))
     unlockExportMediaPlayback(unlockClip?.blob)
 
-    const watermarked = shouldWatermarkExports(data)
     const hasLocation = clips.some(
       (clip) => typeof clip.lat === 'number' && typeof clip.lng === 'number',
     )
-    const includeLocation =
-      data.watermarkRemoved && data.includeLocationInExports && hasLocation
+    const includeLocation = data.includeLocationInExports && hasLocation
     // Always pin the canvas to the film so mismatched clips crop or
     // letterbox instead of stretching the output to the first take.
     const orientation = projectOrientation(project ?? { orientation: undefined })
     const signature = exportSignature(
       clips,
-      watermarked,
       audio,
       orientation,
       includeLocation,
@@ -386,7 +373,6 @@ export function ProjectPage(handle: Handle<ProjectPageProps>) {
       result: null,
       error: null,
       notice: null,
-      watermarked,
       locationIncluded: false,
       usedFallback: false,
     })
@@ -442,7 +428,6 @@ export function ProjectPage(handle: Handle<ProjectPageProps>) {
               result: recovered.result,
               error: null,
               notice: 'Restored your last export — nothing changed since. Retry re-renders.',
-              watermarked: recovered.watermarked,
               locationIncluded: recovered.result.locationIncluded,
               usedFallback: false,
             })
@@ -469,7 +454,6 @@ export function ProjectPage(handle: Handle<ProjectPageProps>) {
         const result = await exportProject(clips, {
           signal,
           audioContext,
-          watermark: watermarked,
           includeLocation,
           projectName: project?.name ?? '',
           orientation,
@@ -512,7 +496,6 @@ export function ProjectPage(handle: Handle<ProjectPageProps>) {
             projectId: project.id,
             result,
             signature,
-            watermarked,
           }).catch(() => undefined)
         }
         if (exportRun !== runId) return
@@ -522,7 +505,6 @@ export function ProjectPage(handle: Handle<ProjectPageProps>) {
           result,
           error: null,
           notice: null,
-          watermarked,
           locationIncluded: result.locationIncluded,
           usedFallback: result.engine === 'realtime' || (exportState?.usedFallback ?? false),
         })
@@ -556,7 +538,6 @@ export function ProjectPage(handle: Handle<ProjectPageProps>) {
           result: null,
           error: err instanceof Error ? err.message : 'Export failed.',
           notice: null,
-          watermarked,
           locationIncluded: false,
           usedFallback: exportState?.usedFallback ?? false,
         })
@@ -583,23 +564,12 @@ export function ProjectPage(handle: Handle<ProjectPageProps>) {
     setExportState(null)
   }
 
-  /** Mid-export Plus toggles persist then restart. Stop, Escape, or a
+  /** Mid-export pref toggles persist then restart. Stop, Escape, or a
    * finished encode during that write must not launch a new forced run. */
   const restartExportIfStillRunning = (startedAtRun: number) => {
     if (exportRun !== startedAtRun) return
     if (exportState?.status !== 'exporting') return
     startExport({ force: true })
-  }
-
-  const persistKeepWatermark = (keep: boolean): Promise<void> => {
-    if (data) {
-      data = { ...data, keepWatermark: keep }
-      void handle.update()
-    }
-    return setKeepWatermark(keep).catch((err) => {
-      reportError(err, 'keep-watermark')
-      throw err
-    })
   }
 
   const persistIncludeLocation = (include: boolean): Promise<void> => {
@@ -711,11 +681,6 @@ export function ProjectPage(handle: Handle<ProjectPageProps>) {
             interactionLocked={overlayOpen}
             orientation={orientation}
             orientationUnlocked={unlocked}
-            plus={data.watermarkRemoved}
-            onUpsell={() => {
-              upselling = true
-              void handle.update()
-            }}
             onOpenEditor={() => {
               mode = 'editor'
               void handle.update()
@@ -734,11 +699,6 @@ export function ProjectPage(handle: Handle<ProjectPageProps>) {
             ensureProjectId={ensureProjectId}
             clips={clips}
             audio={data.audio}
-            plus={data.watermarkRemoved}
-            onUpsell={() => {
-              upselling = true
-              void handle.update()
-            }}
             canUndo={data.canUndo}
             interactionLocked={overlayOpen}
             onOpenCamera={() => {
@@ -770,25 +730,17 @@ export function ProjectPage(handle: Handle<ProjectPageProps>) {
           <ExportOverlay
             projectName={project.name}
             progress={exportState?.progress ?? 0}
-            watermarked={exportState?.watermarked === true}
             locationIncluded={
-              data.watermarkRemoved &&
               data.includeLocationInExports &&
               clips.some((clip) => typeof clip.lat === 'number' && typeof clip.lng === 'number')
             }
             usedFallback={exportState?.usedFallback === true}
-            purchased={data.watermarkRemoved}
-            keepWatermark={data.keepWatermark}
             includeLocation={data.includeLocationInExports}
             hasTaggedClips={clips.some(
               (clip) => typeof clip.lat === 'number' && typeof clip.lng === 'number',
             )}
             bindPreviewCanvas={bindPreviewCanvas}
             onStop={closeExport}
-            onKeepWatermarkChange={(keep) => {
-              const runId = exportRun
-              void persistKeepWatermark(keep).then(() => restartExportIfStillRunning(runId))
-            }}
             onIncludeLocationChange={(include) => {
               const runId = exportRun
               void persistIncludeLocation(include).then(() => restartExportIfStillRunning(runId))
@@ -801,25 +753,14 @@ export function ProjectPage(handle: Handle<ProjectPageProps>) {
             status={exportState.status}
             error={exportState.error}
             notice={exportState.notice}
-            watermarked={exportState.watermarked}
             usedFallback={exportState.usedFallback}
-            purchased={data.watermarkRemoved}
-            keepWatermark={data.keepWatermark}
             includeLocation={data.includeLocationInExports}
             locationIncluded={exportState.locationIncluded}
             hasTaggedClips={clips.some(
               (clip) => typeof clip.lat === 'number' && typeof clip.lng === 'number',
             )}
             busy={exportActionCount > 0}
-            onKeepWatermarkChange={persistKeepWatermark}
             onIncludeLocationChange={persistIncludeLocation}
-            onRemoveWatermark={() => {
-              window.open(REMOVE_WATERMARK_LINK, '_blank', 'noopener')
-            }}
-            onRestorePurchase={() => {
-              restoring = true
-              void handle.update()
-            }}
             canShare={
               !!exportState.result &&
               !!exportFilename &&
@@ -897,13 +838,13 @@ export function ProjectPage(handle: Handle<ProjectPageProps>) {
                     await downloadBlob(backup, filename)
                     setExportNotice(
                       `Backup (${sizeLabel}) saved to your downloads — too large for the share sheet. ` +
-                        'Open kody.video → About → Import a backup to restore it.',
+                        'Open Clipcam → About → Import a backup to restore it.',
                     )
                   } else {
                     const outcome = await shareOrDownload(backup, filename)
                     if (outcome !== 'cancelled') {
                       setExportNotice(
-                        `Backup (${sizeLabel}) saved. Open kody.video → About → Import a backup to restore it.`,
+                        `Backup (${sizeLabel}) saved. Open Clipcam → About → Import a backup to restore it.`,
                       )
                     }
                   }
@@ -920,39 +861,6 @@ export function ProjectPage(handle: Handle<ProjectPageProps>) {
             onRetry={() => startExport({ force: true })}
             onReExport={() => startExport({ force: true })}
             onClose={closeExport}
-          />
-        ) : null}
-
-        {upselling ? (
-          <UpsellSheet
-            onClose={() => {
-              upselling = false
-              void handle.update()
-            }}
-            onRestore={() => {
-              upselling = false
-              restoring = true
-              void handle.update()
-            }}
-          />
-        ) : null}
-
-        {restoring ? (
-          <RestoreSheet
-            onClose={() => {
-              restoring = false
-              void handle.update()
-            }}
-            onRestored={() => {
-              restoring = false
-              void handle.update()
-              showToast(
-                data?.keepWatermark
-                  ? 'Purchase restored — Plus unlocked (Kody mark still kept)'
-                  : 'Purchase restored — new exports are watermark-free',
-              )
-              refresh()
-            }}
           />
         ) : null}
 

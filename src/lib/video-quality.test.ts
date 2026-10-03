@@ -28,9 +28,9 @@ describe('videoBitrateFor', () => {
 
 describe('recordingVideoBitsPerSecond', () => {
   it('assumes the active preset size when the track has not reported yet', () => {
-    expect(recordingVideoBitsPerSecond()).toBe(videoBitrateFor(1280, 720, 0.16))
-    setActiveVideoQuality('high', true)
     expect(recordingVideoBitsPerSecond()).toBe(videoBitrateFor(1920, 1080, 0.16))
+    setActiveVideoQuality('standard')
+    expect(recordingVideoBitsPerSecond()).toBe(videoBitrateFor(1280, 720, 0.16))
   })
 
   it('follows the live track size', () => {
@@ -66,17 +66,12 @@ describe('recordingVideoBitsPerSecond', () => {
 })
 
 describe('video quality presets', () => {
-  it('defaults free users to standard and Plus users to high', () => {
-    expect(resolveVideoQuality(undefined)).toBe('standard')
-    expect(resolveVideoQuality('ultra')).toBe('standard')
-    expect(resolveVideoQuality(undefined, true)).toBe('high')
+  it('defaults to high and keeps any valid stored preset', () => {
+    expect(resolveVideoQuality(undefined)).toBe('high')
+    expect(resolveVideoQuality('ultra')).toBe('high')
+    expect(resolveVideoQuality('high')).toBe('high')
+    expect(resolveVideoQuality('standard')).toBe('standard')
     expect(resolveVideoQuality('saver')).toBe('saver')
-    expect(resolveVideoQuality('saver', true)).toBe('saver')
-  })
-
-  it('clamps a stored high preset back to standard without Plus', () => {
-    expect(resolveVideoQuality('high')).toBe('standard')
-    expect(resolveVideoQuality('high', true)).toBe('high')
   })
 
   it('keeps 30fps and only changes the capture size', () => {
@@ -95,9 +90,9 @@ describe('video quality presets', () => {
   })
 
   it('hydrates the in-memory capture preset used by camera and recorder', () => {
-    expect(activeVideoQuality()).toBe('standard')
-    expect(setActiveVideoQuality('high')).toBe('standard')
-    expect(setActiveVideoQuality('high', true)).toBe('high')
+    expect(activeVideoQuality()).toBe('high')
+    expect(setActiveVideoQuality('saver')).toBe('saver')
+    expect(setActiveVideoQuality('high')).toBe('high')
     expect(activeVideoQuality()).toBe('high')
     expect(captureVideoConstraints()).toEqual(captureVideoConstraints('high'))
     expect(recordingVideoBitsPerSecond()).toBe(

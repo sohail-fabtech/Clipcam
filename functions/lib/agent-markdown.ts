@@ -1,8 +1,7 @@
 /**
- * Markdown-for-agents responses for the public pages. The kody.video zone
- * is on Cloudflare's Free plan, so the hosted Markdown for Agents converter
- * cannot be enabled (`content_converter` is not editable). This module is
- * the same Accept: text/markdown negotiation that converter would do.
+ * Markdown-for-agents responses for the public pages: the same
+ * Accept: text/markdown negotiation Cloudflare's hosted converter would do,
+ * which is not available on every plan.
  */
 
 export const CONTENT_SIGNAL = 'search=yes, ai-input=yes, ai-train=yes'
@@ -18,70 +17,54 @@ type AgentPage = {
 
 const PAGES: Record<AgentPageId, AgentPage> = {
   home: {
-    title: 'Kody Video',
+    title: 'Clipcam',
     description:
-      'Hold anywhere to record clips. Privacy-first camera for the web. Record shot by shot, trim on a filmstrip, export one video.',
-    canonical: 'https://kody.video/',
-    body: `# Kody Video
+      'Hold anywhere to record clips. Privacy-first camera for the web. Record shot by shot, trim on a filmstrip, export one video. Free, with no watermark.',
+    canonical: '/',
+    body: `# Clipcam
 
 Privacy-first clips camera for the web. Hold anywhere on the preview to record, arrange clips on a filmstrip timeline, then tap **Go** to export or share one video — all on your device.
 
 ## What it is
 
-- Free and open source: [github.com/kentcdodds/kody-video](https://github.com/kentcdodds/kody-video)
-- No accounts, no clip uploads, no cross-site tracking
+- Free and open source — every feature, no subscription, no watermark
+- No accounts, no clip uploads, no analytics, no tracking
 - Projects live in this browser's IndexedDB until you export, back up, or send them
-- Installable PWA (Chromium, especially Android, is the primary target)
+- Installable PWA that works offline (Chromium, especially Android, is the primary target)
 
 ## How to use it
 
-1. Open [kody.video](https://kody.video/) and allow the camera
+1. Open the app and allow the camera
 2. Hold anywhere on the preview to record a clip; release to stop
-3. Arrange, duplicate, delete, and trim clips on the filmstrip
+3. Arrange, duplicate, split, delete, and trim clips on the filmstrip
 4. Tap **Go** to export one video, then Share or Save
 
-Photos can be added to the timeline as still clips. Desktop can record a screen or window as a regular clip.
-
-## Kody Video Plus
-
-A one-time $0.99 Stripe Payment Link. It removes the export watermark and unlocks six project slots, background music, landscape projects, optional location tagging, and send-to-another-device. Restore from the device that already has Plus (About → Use Plus on another device) with a short code or QR — there is no login.
+Photos can be added to the timeline as still clips. Desktop can record a screen or window as a regular clip. Six project slots, 1080p recording, background music, landscape projects, optional location tagging, and Send to device are all included.
 
 ## Support
 
-Email [team@kody.video](mailto:team@kody.video) or [open a GitHub issue](https://github.com/kentcdodds/kody-video/issues/new).
+Made by Sohail Khan — [me.jscrate.dev](https://me.jscrate.dev).
 
 See [About](/about), [Privacy](/privacy), [Terms](/terms), and [auth.md](/auth.md).
 `,
   },
   about: {
-    title: 'About — Kody Video',
-    description:
-      'Kody Video is a free, open-source, on-device clips camera for the web.',
-    canonical: 'https://kody.video/about',
-    body: `# About Kody Video
+    title: 'About — Clipcam',
+    description: 'Clipcam is a free, open-source, on-device clips camera for the web.',
+    canonical: '/about',
+    body: `# About Clipcam
 
-Kody Video is a free and open source clips camera. The whole app, including the export engine, lives at [github.com/kentcdodds/kody-video](https://github.com/kentcdodds/kody-video).
+Clipcam is a free and open source clips camera by Sohail Khan ([me.jscrate.dev](https://me.jscrate.dev)). Every feature is free — there is no subscription, purchase, or watermark.
 
-## See it in action
+## Credits
 
-Kent demos record, arrange, and share in a minute and a half: [YouTube tour](https://youtube.com/shorts/JaUdPTHHk7A). [A video Kent made with Kody Video](https://x.com/kentcdodds/status/2084891368724533456).
-
-## Inspired by OK Video
-
-The hold-to-record interaction model is inspired by [OK Video](https://okvideo.app) by Pim Coumans. Kody Video is an independent project and is not affiliated with OK Video. The koala mascot comes from the KCD community: [kentcdodds.com/kody](https://kentcdodds.com/kody).
+Clipcam is built on [Kody Video](https://github.com/kentcdodds/kody-video) by Kent C. Dodds. The hold-to-record interaction model is inspired by [OK Video](https://okvideo.app) by Pim Coumans. Clipcam is an independent project and is not affiliated with either.
 
 ## Private by design
 
-No accounts, no uploads, no cross-site tracking. Clips live in this browser's storage until you export and share them yourself.
+No accounts, no uploads, no analytics, no crash reporting. Clips live in this browser's storage until you export and share them yourself.
 
-The app's only own network traffic:
-
-- Stripe checkout and purchase verification if you buy Plus
-- Anonymous Sentry crash reports (error and stack trace — never media)
-- Cookieless Fathom page-view counts
-- The home-screen tour video from \`media.kody.video\` if you tap play
-- A short-lived \`/api/sync\` matchmaking room if you tap Send to device (code + WebRTC descriptions, never clips)
-- A short-lived Plus restore code if you share Plus with another device (session id only)
+The app's only own network traffic is a short-lived \`/api/sync\` matchmaking room if you tap Send to device (code + WebRTC descriptions, never clips).
 
 ## Made for phones
 
@@ -89,11 +72,7 @@ Designed as a mobile camera app. Desktop has keyboard support (hold Space to rec
 
 ## Backups
 
-Every project can be saved as a \`.kodyvideo\` file (⋯ → Save backup). Plus can also Send to device; the other device opens [kody.video/receive](/receive). Restore a backup from the About page in the app, or drop the file anywhere.
-
-## Support
-
-[Open a GitHub issue](https://github.com/kentcdodds/kody-video/issues/new) or email [team@kody.video](mailto:team@kody.video).
+Every project can be saved as a \`.clipcam\` file (⋯ → Save backup); older \`.kodyvideo\` backups import too. You can also Send to device; the other device opens [/receive](/receive). Restore a backup from the About page in the app, or drop the file anywhere.
 
 A poisoned or stale app shell (hero with no project slots) can be diagnosed at [/api/diag](/api/diag) and repaired at [/api/recover](/api/recover). Recover never touches IndexedDB.
 
@@ -103,29 +82,25 @@ A poisoned or stale app shell (hero with no project slots) can be diagnosed at [
 `,
   },
   privacy: {
-    title: 'Privacy — Kody Video',
+    title: 'Privacy — Clipcam',
     description:
-      'Kody Video keeps recordings on your device. No accounts, no uploads, no cross-site tracking.',
-    canonical: 'https://kody.video/privacy',
+      'Clipcam keeps recordings on your device. No accounts, no uploads, no analytics, no tracking.',
+    canonical: '/privacy',
     body: `# Privacy
 
-Last updated: August 2026
+Last updated: October 2026
 
 ## Everything stays on your device
 
 All recordings, projects, and edits live in this browser's on-device storage (IndexedDB). Nothing is uploaded. There are no accounts, no cookies, and no cross-site tracking.
 
-## Anonymous page-view counts
+## No analytics, no crash reports
 
-The app counts page views with [Fathom Analytics](https://usefathom.com), a privacy-first service: no cookies, no personal identifiers, no cross-site tracking, and nothing that requires a consent banner. We only ever see aggregate numbers like "how many people opened the app today".
-
-## Anonymous crash reports
-
-When the app itself breaks, an error report (the error message, a stack trace, browser and OS names, and which step failed) is sent to Sentry so bugs get found and fixed. Crash reports never contain your clips, audio, location, or any account identifier, and no IP-based user profile is kept.
+Clipcam runs no analytics and sends no crash reports. The only data the app ever sends on its own is a short-lived matchmaking room, and only when you tap Send to device.
 
 ## Send to another device
 
-Kody Video Plus can send a project to another phone or computer that has the app open. A Cloudflare matchmaker introduces the two browsers (a short code plus the WebRTC connection description, which includes network addresses). Your clips never go to our servers — they travel device-to-device, encrypted. Rooms expire in minutes and are not stored as a library. Receiving a project is free and is the same as importing a backup.
+Clipcam can send a project to another phone or computer that has the app open. A Cloudflare matchmaker introduces the two browsers (a short code plus the WebRTC connection description, which includes network addresses). Your clips never go to a server — they travel device-to-device, encrypted. Rooms expire in minutes and are not stored as a library.
 
 ## Camera and microphone
 
@@ -133,11 +108,7 @@ The camera and microphone are used only while the app is open, on the camera vie
 
 ## Optional location tagging
 
-Location tagging is an optional Plus feature and is off by default. When it is on, each new clip stores device coordinates locally. Exported videos omit location by default; Plus users can explicitly include it in MP4 metadata from the export sheet.
-
-## Watermark removal purchase
-
-The one-time Plus purchase is processed by Stripe on Stripe's pages — their privacy policy applies. The app's verification endpoint sees only the checkout session id, never your media or location. Sharing Plus with another device mints a short-lived restore code that maps to that same session id and expires in minutes.
+Location tagging is optional and off by default. When it is on, each new clip stores device coordinates locally. Exported videos omit location by default; you can explicitly include it in MP4 metadata from the export sheet.
 
 ## Exports and sharing
 
@@ -149,30 +120,26 @@ Delete projects in the app, or clear this site's browsing data / uninstall the P
 
 ## Questions
 
-Email [team@kody.video](mailto:team@kody.video) or open an issue at [github.com/kentcdodds/kody-video](https://github.com/kentcdodds/kody-video).
+Reach Sohail Khan at [me.jscrate.dev](https://me.jscrate.dev).
 
 See also [Terms](/terms) and [About](/about).
 `,
   },
   terms: {
-    title: 'Terms — Kody Video',
-    description: 'Terms of use for the on-device Kody Video clips camera.',
-    canonical: 'https://kody.video/terms',
+    title: 'Terms — Clipcam',
+    description: 'Terms of use for the on-device Clipcam clips camera.',
+    canonical: '/terms',
     body: `# Terms
 
-Last updated: July 2026
+Last updated: October 2026
 
 ## Free to use, as is
 
-Kody Video is free to use and runs entirely on your device. It is provided "as is" without warranty of any kind. Use it at your own risk — always keep copies of recordings you care about. Device storage can be cleared by the browser or OS.
+Clipcam is free to use — every feature, with no subscription, purchase, or watermark — and runs entirely on your device. It is provided "as is" without warranty of any kind. Use it at your own risk — always keep copies of recordings you care about. Device storage can be cleared by the browser or OS.
 
 ## Your recordings are yours
 
 You own your recordings entirely. The app claims no rights to any of your content.
-
-## Kody Video Plus
-
-Kody Video Plus is a one-time $0.99 purchase that unlocks watermark-free exports, optional location tagging, sending a project to another device, and up to six project slots (the free plan includes one project) for the browser profile where it is verified. You can restore the purchase on another device with a short code or QR from the device that already has Plus. Payments are handled by Stripe. For refunds or purchase trouble, email [team@kody.video](mailto:team@kody.video).
 
 ## Recording responsibly
 
@@ -180,53 +147,44 @@ Don't use the app to record people unlawfully. You are responsible for complying
 
 ## Liability
 
-Liability is limited to the amount you paid for the app — at most $0.99.
+Clipcam is free, and to the extent the law allows, its authors are not liable for any loss arising from its use.
 
 ## Changes and affiliation
 
-These terms may change with the app; they are versioned in the [open-source repo](https://github.com/kentcdodds/kody-video). Kody Video is not affiliated with OK Video.
+These terms may change with the app; they are versioned with its open-source code. Questions: [me.jscrate.dev](https://me.jscrate.dev). Clipcam is not affiliated with OK Video.
 
 See also [Privacy](/privacy) and [About](/about).
 `,
   },
   receive: {
-    title: 'Receive a project — Kody Video',
-    description:
-      'Accept a Kody Video project sent from another device. Free. Clips never upload.',
-    canonical: 'https://kody.video/receive',
+    title: 'Receive a project — Clipcam',
+    description: 'Accept a Clipcam project sent from another device. Free. Clips never upload.',
+    canonical: '/receive',
     body: `# Receive a project
 
-Open this page on the receiving device when someone taps **Send to device** (Plus). The two browsers pair with a short code or QR and the \`.kodyvideo\` project travels over a WebRTC DataChannel.
+Open this page on the receiving device when someone taps **Send to device**. The two browsers pair with a short code or QR and the project travels over a WebRTC DataChannel.
 
-Receiving is free. Clips never land on Kody Video servers. If the devices cannot connect, use **Save backup** and import the \`.kodyvideo\` file instead.
+Clips never land on a server. If the devices cannot connect, use **Save backup** and import the \`.clipcam\` file instead.
 
 There is no account. See [auth.md](/auth.md) and [About](/about).
 `,
   },
   auth: {
-    title: 'Authentication — Kody Video',
-    description: 'Kody Video has no accounts. Plus is a one-time Stripe Payment Link.',
-    canonical: 'https://kody.video/auth.md',
+    title: 'Authentication — Clipcam',
+    description: 'Clipcam has no accounts and no purchases.',
+    canonical: '/auth.md',
     body: `# Authentication
 
-Kody Video has **no accounts**.
+Clipcam has **no accounts** and **no purchases** — every feature is free.
 
 - No login, passwords, cookies, sessions, or OAuth
-- Do not invent a sign-in flow, password reset, or "create an account" step
-- Projects and clips live in this browser's IndexedDB (\`kody-video\`)
+- Do not invent a sign-in flow, password reset, paywall, or "create an account" step
+- Projects and clips live in this browser's IndexedDB (\`kody-video\`, kept for compatibility)
 - There is no clip upload API and no user cloud library
 
-## Kody Video Plus
-
-Plus is a one-time $0.99 [Stripe Payment Link](https://buy.stripe.com/00wfZi71ibU30rk9hU2Ry07). After checkout, Stripe redirects to \`/unlocked?session_id=<CHECKOUT_SESSION_ID>\`. \`/api/verify-purchase\` checks that session server-side; the entitlement is then stored on the device. 100%-off promotion codes use the same verification.
-
-Restore on another device from the device that already has Plus: About → **Use Plus on another device** shows a short code and QR. The new device opens [kody.video/unlocked](/unlocked) (same path shape as [kody.video/receive](/receive)) and types or scans the code. Legacy \`/unlocked?code=\` links still work. That mints a short-lived mapping to the same Stripe session — not a password. A checkout session id still works if you have one. Stripe receipt URLs do not include that session id.
-
-## Other network calls
+## Network calls
 
 - \`/api/sync\` — short-lived send-to-device matchmaking (room code + WebRTC descriptions). Never media.
-- \`/api/restore-codes\` — short-lived Plus restore codes (session id only, 30 minutes).
-- \`/api/verify-purchase\` — Stripe session or restore-code check. Never media.
 - \`/api/diag\` and \`/api/recover\` — on-device shell repair. Recover never touches IndexedDB.
 
 See [Privacy](/privacy) and [About](/about).

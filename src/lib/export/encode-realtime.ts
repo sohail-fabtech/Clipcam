@@ -24,7 +24,6 @@ import {
   decodeBackgroundAudio,
   decodeClipAudio,
   drawFitFrom,
-  drawWatermark,
   loadClipImage,
   loadClipVideo,
   noteEncodeCanvasKind,
@@ -48,8 +47,6 @@ export interface RealtimeExportOptions {
   onProgress?: (ratio: number) => void
   /** Visible canvas to mirror sampled frames onto while exporting. */
   getPreviewCanvas?: () => HTMLCanvasElement | null
-  /** Mark stamped onto each frame; null when the user purchased removal. */
-  watermarkImage?: HTMLImageElement | null
   /** Background-music playlist mixed under the clips (per-clip volumes). */
   background?: BackgroundAudio | null
   /** Force the output into the project's orientation (absent = follow the
@@ -367,7 +364,6 @@ export async function exportRealtime(
           frameCounter,
           // No mirroring needed when the encode canvas is the preview.
           getPreviewCanvas: encodingIntoPreview ? undefined : options.getPreviewCanvas,
-          watermarkImage: options.watermarkImage ?? null,
           signal: options.signal,
           fit: clipCanvasFit(segment.clip),
           onElapsedMs: (elapsed: number) => {
@@ -452,7 +448,6 @@ interface PaintSharedArgs {
   ctx: CanvasRenderingContext2D
   frameCounter: { count: number }
   getPreviewCanvas?: () => HTMLCanvasElement | null
-  watermarkImage: HTMLImageElement | null
   signal?: AbortSignal
   fit: 'cover' | 'contain'
   onElapsedMs: (elapsedMs: number) => void
@@ -490,7 +485,6 @@ async function paintImageSegment({
   ctx,
   frameCounter,
   getPreviewCanvas,
-  watermarkImage,
   signal,
   fit,
   onElapsedMs,
@@ -502,9 +496,6 @@ async function paintImageSegment({
   try {
     const paintFrame = () => {
       drawFitFrom(ctx, bitmap, bitmap.width, bitmap.height, canvas.width, canvas.height, fit)
-      if (watermarkImage) {
-        drawWatermark(ctx, watermarkImage, canvas.width, canvas.height)
-      }
     }
     paintFrame()
     const startedAt = performance.now()
@@ -554,7 +545,6 @@ async function paintSegment({
   normalizeClip,
   frameCounter,
   getPreviewCanvas,
-  watermarkImage,
   signal,
   fit,
   onElapsedMs,
@@ -588,9 +578,6 @@ async function paintSegment({
         canvas.height,
         fit,
       )
-      if (watermarkImage) {
-        drawWatermark(ctx, watermarkImage, canvas.width, canvas.height)
-      }
     }
     paintFrame()
 

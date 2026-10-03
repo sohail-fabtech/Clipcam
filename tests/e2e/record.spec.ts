@@ -1,7 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import {
   openNewProject,
-  openNewPlusProject,
   pressStageUntilRecording,
   recordClip,
   totalClipCount,
@@ -214,7 +213,7 @@ test.describe('camera & hold-to-record', () => {
     // location permission"). It used to be anchored at mid-screen and cut
     // off by the right viewport edge (the rise-in animation's transform
     // replaced the centering translateX).
-    await openNewPlusProject(page)
+    await openNewProject(page)
     await page.getByRole('button', { name: 'Toggle location tagging' }).click()
 
     const toast = page.locator('.toast')
@@ -249,7 +248,7 @@ test.describe('camera & hold-to-record', () => {
   test('location tagging geotags new clips while on', async ({ context, page }) => {
     await context.grantPermissions(['camera', 'microphone', 'geolocation'])
     await context.setGeolocation({ latitude: 40.2338, longitude: -111.6585, accuracy: 12 })
-    await openNewPlusProject(page)
+    await openNewProject(page)
     const toggle = page.getByRole('button', { name: 'Toggle location tagging' })
     await toggle.click()
     await expect(page.locator('.toast')).toContainText('Location tagging on')
@@ -274,10 +273,6 @@ test.describe('camera & hold-to-record', () => {
       .toEqual({ lat: 40.2338, lng: -111.6585 })
   })
 
-  test('location tagging is hidden without Kody Video Plus', async ({ page }) => {
-    await openNewProject(page)
-    await expect(page.getByRole('button', { name: 'Toggle location tagging' })).toHaveCount(0)
-  })
 })
 
 test.describe('camera resume after suspension', () => {

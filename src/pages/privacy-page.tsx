@@ -1,6 +1,6 @@
 import { IconBack } from '../components/icons'
 
-/** Plain-language privacy policy for on-device Kody Video. */
+/** Plain-language privacy policy for on-device Clipcam. */
 export function PrivacyPage() {
   return () => (
     <div className="screen about-screen">
@@ -14,7 +14,7 @@ export function PrivacyPage() {
 
       <div className="about-body">
         <h1>Privacy</h1>
-        <p className="legal-updated">Last updated: September 2026</p>
+        <p className="legal-updated">Last updated: October 2026</p>
 
         <section className="about-section">
           <h2>Everything stays on your device</h2>
@@ -26,27 +26,10 @@ export function PrivacyPage() {
         </section>
 
         <section className="about-section">
-          <h2>Anonymous page-view counts</h2>
+          <h2>No analytics, no crash reports</h2>
           <p>
-            The app counts page views with{' '}
-            <a href="https://usefathom.com" target="_blank" rel="noreferrer noopener">
-              Fathom Analytics
-            </a>
-            , a privacy-first service: no cookies, no personal identifiers, no cross-site
-            tracking, and nothing that requires a consent banner. We only ever see aggregate
-            numbers like &ldquo;how many people opened the app today&rdquo;.
-          </p>
-        </section>
-
-        <section className="about-section">
-          <h2>Anonymous crash reports</h2>
-          <p>
-            When the app itself breaks, an error report (the error message, a stack trace, browser
-            and OS names, and which step failed — e.g. &ldquo;export&rdquo;) is sent to Sentry so
-            bugs get found and fixed. Crash reports never contain your clips, audio, location, or
-            any account identifier, and no IP-based user profile is kept. Page-view counts, crash
-            reports, and (only if you tap Send to device) a short-lived matchmaking room are the
-            only data the app sends anywhere on its own.
+            Clipcam runs no analytics and sends no crash reports. The only data the app ever sends
+            on its own is a short-lived matchmaking room, and only when you tap Send to device.
           </p>
         </section>
 
@@ -58,16 +41,16 @@ export function PrivacyPage() {
             how busy the app was while recording, encoder and save timings, and coarse device
             facts (browser and OS names, CPU cores, memory size, battery level, camera
             resolution). Reports never contain video, audio, location, or project names. They
-            stay on the device unless you share them yourself or tap Send on About → Recording
-            health, which sends that report to Sentry. Clear them there anytime.
+            stay on the device unless you share them yourself from About → Recording health.
+            Clear them there anytime.
           </p>
         </section>
 
         <section className="about-section">
           <h2>Send to another device</h2>
           <p>
-            Kody Video Plus can send a project to another phone or computer that has the app open.
-            A Cloudflare matchmaker introduces the two browsers (a short code plus the WebRTC
+            Clipcam can send a project to another phone or computer that has the app open. A
+            Cloudflare matchmaker introduces the two browsers (a short code plus the WebRTC
             connection description, which includes network addresses). Your clips never go to our
             servers — they travel device-to-device, encrypted. Rooms expire in minutes and are not
             stored as a library. If the devices cannot connect (different networks, strict Wi‑Fi),
@@ -89,10 +72,10 @@ export function PrivacyPage() {
         <section className="about-section">
           <h2>Optional location tagging</h2>
           <p>
-            Location tagging is an optional Kody Video Plus feature and is off by default. You can
+            Location tagging is optional and off by default. You can
             opt in with a button, which asks the browser for permission. When it&rsquo;s on, each
             new clip stores device coordinates locally. Exported videos omit location by default;
-            Plus users can explicitly include it in MP4 metadata and chapter titles from the export
+            you can explicitly include it in MP4 metadata and chapter titles from the export
             sheet. Leaving that export option off is treated as a public share: the file will not
             include automatically captured coordinates, filming dates, or chapter-coordinate
             metadata. You can turn location tagging off anytime; existing clips keep whatever they
@@ -101,26 +84,15 @@ export function PrivacyPage() {
         </section>
 
         <section className="about-section">
-          <h2>Watermark removal purchase</h2>
-          <p>
-            The one-time watermark-removal purchase is processed by Stripe on Stripe&rsquo;s pages
-            — their privacy policy applies. The app&rsquo;s verification endpoint sees only the
-            checkout session id, never your media or location. Sharing Plus with another device
-            mints a short-lived restore code that maps to that same session id and expires in
-            minutes.
-          </p>
-        </section>
-
-        <section className="about-section">
           <h2>Exports &amp; sharing</h2>
           <p>
             Exported or shared files leave the device only when you share or save them yourself.
-            MP4 exports always include the project title you chose, credit Kody Video (
-            <a href="https://kody.video">kody.video</a>), and note how many clips (and photos, and
+            MP4 exports always include the project title you chose, credit Clipcam, and note how
+            many clips (and photos, and
             whether there is music) made the film. The title is whatever you named the project — it
             can identify a person, place, or event if you put that in the name. Automatically
             captured coordinates, filming dates inside the MP4, and chapter coordinates stay out
-            of the file unless you turn on the Plus option to include clip locations. Share and
+            of the file unless you turn on the option to include clip locations. Share and
             Save still stamp the file&rsquo;s last-modified time from the last clip so photo
             libraries (including Synology Photos) can sort by when you filmed.
           </p>
@@ -137,13 +109,9 @@ export function PrivacyPage() {
         <section className="about-section">
           <h2>Questions</h2>
           <p>
-            Email <a href="mailto:team@kody.video">team@kody.video</a> or open an issue at{' '}
-            <a
-              href="https://github.com/kentcdodds/kody-video"
-              target="_blank"
-              rel="noreferrer noopener"
-            >
-              github.com/kentcdodds/kody-video
+            Reach Sohail Khan at{' '}
+            <a href="https://me.jscrate.dev" target="_blank" rel="noreferrer noopener">
+              me.jscrate.dev
             </a>
             .
           </p>

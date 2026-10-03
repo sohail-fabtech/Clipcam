@@ -10,7 +10,6 @@ import {
   AUDIO_SILENCE_PEAK,
   classifyOutputAudioPeak,
   decodedAudioMaxPeak,
-  loadWatermarkImage,
   measureBlobAudioPeak,
   reportBlackExportVideo,
   reportSilentExportAudio,
@@ -36,12 +35,10 @@ export interface ExportOptions {
    * after the export starts.
    */
   getPreviewCanvas?: () => HTMLCanvasElement | null
-  /** Stamp the Kody Video mark on frames (default true; off after purchase). */
-  watermark?: boolean
   /**
    * Include captured coordinates in MP4 metadata and chapter titles.
    * Default false so exports do not disclose location without an explicit
-   * Plus-user opt-in. When off, descriptive tags also omit filming dates.
+   * opt-in. When off, descriptive tags also omit filming dates.
    */
   includeLocation?: boolean
   /** Project title written into MP4 `©nam` (and the export cache key). */
@@ -77,8 +74,6 @@ export async function exportProject(
   }
 
   throwIfExportAborted(options.signal)
-  const watermarkImage = options.watermark === false ? null : await loadWatermarkImage()
-  throwIfExportAborted(options.signal)
 
   // Reclaim stale cache (old temp files, the clips zip, an orphaned last
   // export) before writing a new potentially-huge file. The current last
@@ -88,13 +83,12 @@ export async function exportProject(
   // Reserved for the whole encode: the streaming temp file has no metadata
   // reference yet, and a sweep or "clear cached exports" from another tab
   // must not delete it mid-write.
-  return withExportCacheReserved(() => runExport(plan, options, watermarkImage))
+  return withExportCacheReserved(() => runExport(plan, options))
 }
 
 async function runExport(
   plan: ReturnType<typeof planExport>,
   options: ExportOptions,
-  watermarkImage: Awaited<ReturnType<typeof loadWatermarkImage>> | null,
 ): Promise<ExportResult> {
   resetAudioDiagnostics()
   resetVideoDiagnostics()
@@ -104,7 +98,6 @@ async function runExport(
         plan,
         options.onProgress,
         options.getPreviewCanvas,
-        watermarkImage,
         options.background,
         options.orientation,
         options.includeLocation === true,
@@ -141,7 +134,6 @@ async function runExport(
     audioContext: options.audioContext,
     onProgress: options.onProgress,
     getPreviewCanvas: options.getPreviewCanvas,
-    watermarkImage,
     background: options.background,
     orientation: options.orientation,
     signal: options.signal,

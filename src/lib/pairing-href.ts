@@ -1,17 +1,15 @@
-/** Canonical pairing URLs — same path shape for receive and Plus unlock. */
-
-export type PairingKind = 'receive' | 'unlocked'
-
+/** Canonical receive URL for Send to device: /receive and /receive/:code. */
 export function pairingHref(
-  kind: PairingKind,
   code?: string | null,
   origin: string = typeof window !== 'undefined' ? window.location.origin : '',
 ): string {
-  const base = `${origin}/${kind}`
+  const base = `${origin}/receive`
   return code ? `${base}/${code}` : base
 }
 
-/** Spoken/printed host path (always the production host, like the About copy). */
-export function pairingHint(kind: PairingKind): string {
-  return `kody.video/${kind}`
+/** Spoken/printed host path for the receive page on this deployment. */
+export function pairingHint(
+  host: string = typeof window !== 'undefined' ? window.location.host : '',
+): string {
+  return `${host}/receive`
 }

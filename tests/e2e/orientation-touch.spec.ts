@@ -4,8 +4,6 @@ import {
   openNewProject,
   recordClip,
   saveScreenshot,
-  totalClipCount,
-  unlockPlus,
   waitForCameraReady,
 } from './helpers'
 
@@ -35,21 +33,19 @@ test.describe('rotate-to-choose orientation (touch)', () => {
     expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true)
   })
 
-  test('plus: an empty project follows rotation and the first take locks it', async ({
+  test('an empty project follows rotation and the first take locks it', async ({
     page,
   }) => {
     await page.goto('/')
-    await unlockPlus(page)
     await openNewProject(page)
 
     // Upright: portrait interface, nothing stored yet.
     await expect.poll(() => shellLayout(page)).toBe('narrow')
 
-    // Turn the phone: the interface follows (no upsell — Plus).
+    // Turn the phone: the interface follows.
     await rotate(page)
     await expect.poll(() => shellLayout(page)).toBe('wide')
     await expect(page.locator('.project-screen.orientation-landscape')).toBeVisible()
-    await expect(page.locator('.sheet[aria-label="Kody Video Plus"]')).toBeHidden()
 
     // On a held device the app is FULL-BLEED — no desktop frame margins
     // shrinking the camera, even though a sideways phone is ≥720px wide.
@@ -95,37 +91,6 @@ test.describe('rotate-to-choose orientation (touch)', () => {
     await page.reload()
     await page.locator('.camera-video').waitFor()
     await expect.poll(() => shellLayout(page)).toBe('wide')
-  })
-
-  test('free plan: rotating stays portrait and recording is allowed', async ({
-    page,
-  }) => {
-    await openNewProject(page)
-    await expect.poll(() => shellLayout(page)).toBe('narrow')
-
-    // Turn the phone: the film stays portrait (landscape lock is Plus),
-    // recording is still allowed, and there is no gate or upsell.
-    await rotate(page)
-    await expect.poll(() => shellLayout(page)).toBe('narrow')
-    await expect(page.locator('.sheet[aria-label="Kody Video Plus"]')).toBeHidden()
-    await expect(page.locator('.orientation-gate-pill')).toHaveCount(0)
-    await expect(page.locator('.project-screen.orientation-landscape')).toHaveCount(0)
-
-    await recordClip(page)
-    expect(await totalClipCount(page)).toBe(1)
-    // Free plan cannot lock landscape, so the film stays portrait.
-    expect(await storedOrientation(page)).toBeUndefined()
-    await expect(page.locator('.project-screen')).toHaveClass(/is-film-framed/)
-    const film = page.locator('.record-stage > .film-frame')
-    const box = await film.boundingBox()
-    expect(box).not.toBeNull()
-    expect(box!.width / box!.height).toBeCloseTo(9 / 16, 2)
-    expect(
-      await page.evaluate(async () => {
-        const storage = await import('/src/lib/storage.ts')
-        return (await storage.listProjects()).length
-      }),
-    ).toBe(1)
   })
 })
 

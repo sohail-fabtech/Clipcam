@@ -32,7 +32,6 @@ import {
   restoreStrandedClips,
   getProject,
   clearUndo,
-  PlusRequiredError,
   removeProjectAudioTrack,
   renameProject,
   setIncludeLocationInExports,
@@ -40,7 +39,6 @@ import {
   setOnboardingDismissed,
   setProjectOrientation,
   setTourCardDismissed,
-  setKeepWatermark,
   setVideoQuality,
   STORAGE_QUOTA_MESSAGE,
   StorageQuotaExceededError,
@@ -59,7 +57,6 @@ import {
   updateClipTrim,
   replaceClipMedia,
 } from './storage'
-import { markWatermarkRemoved } from './entitlement'
 import { activeVideoQuality, resetActiveVideoQualityForTests } from './video-quality'
 import {
   MAX_IMAGE_DURATION_MS,
@@ -273,18 +270,16 @@ describe('storage layer', () => {
     expect(db.objectStoreNames.contains('projects')).toBe(true)
   })
 
-  it('defaults free video quality to standard and persists saver', async () => {
+  it('defaults video quality to high and persists saver', async () => {
     expect((await getSettings()).videoQuality).toBeUndefined()
-    expect(activeVideoQuality()).toBe('standard')
+    expect(activeVideoQuality()).toBe('high')
     await setVideoQuality('standard')
     expect((await getSettings()).videoQuality).toBe('standard')
     await setVideoQuality('saver')
     expect((await getSettings()).videoQuality).toBe('saver')
   })
 
-  it('gates high video quality behind Plus', async () => {
-    await expect(setVideoQuality('high')).rejects.toBeInstanceOf(PlusRequiredError)
-    await markWatermarkRemoved('cs_test_video_quality')
+  it('persists high video quality', async () => {
     await setVideoQuality('high')
     expect((await getSettings()).videoQuality).toBe('high')
     expect(activeVideoQuality()).toBe('high')
@@ -293,41 +288,27 @@ describe('storage layer', () => {
   it('hydrates the in-memory capture preset when settings are read', async () => {
     await setVideoQuality('saver')
     resetActiveVideoQualityForTests()
-    expect(activeVideoQuality()).toBe('standard')
+    expect(activeVideoQuality()).toBe('high')
     await getSettings()
     expect(activeVideoQuality()).toBe('saver')
   })
 
-  it('hydrates Plus users to high when they have not picked a preset', async () => {
-    await markWatermarkRemoved('cs_test_video_quality_default')
+  it('hydrates to high when no preset was picked', async () => {
     resetActiveVideoQualityForTests()
-    expect(activeVideoQuality()).toBe('standard')
     await getSettings()
+    expect((await getSettings()).videoQuality).toBeUndefined()
     expect(activeVideoQuality()).toBe('high')
   })
 
-  it('defaults keepWatermark off and persists the Plus opt-in', async () => {
-    expect((await getSettings()).keepWatermark).toBeUndefined()
-    await setKeepWatermark(true)
-    expect((await getSettings()).keepWatermark).toBe(true)
-    await setKeepWatermark(false)
-    expect((await getSettings()).keepWatermark).toBe(false)
-  })
-
-  it('serializes overlapping mark and location pref writes', async () => {
-    await markWatermarkRemoved('cs_test_pref_race')
-    await Promise.all([setKeepWatermark(true), setIncludeLocationInExports(true)])
+  it('serializes overlapping pref writes', async () => {
+    await Promise.all([setVideoQuality('saver'), setIncludeLocationInExports(true)])
     expect(await getSettings()).toMatchObject({
-      keepWatermark: true,
+      videoQuality: 'saver',
       includeLocationInExports: true,
     })
   })
 
-  it('gates location capture and export preferences behind Plus', async () => {
-    await expect(setLocationTaggingEnabled(true)).rejects.toBeInstanceOf(PlusRequiredError)
-    await expect(setIncludeLocationInExports(true)).rejects.toBeInstanceOf(PlusRequiredError)
-
-    await markWatermarkRemoved('cs_test_location')
+  it('persists location capture and export preferences', async () => {
     await setLocationTaggingEnabled(true)
     await setIncludeLocationInExports(true)
     expect(await getSettings()).toMatchObject({
@@ -343,14 +324,7 @@ describe('storage layer', () => {
     })
   })
 
-  it('gates the second project behind the Plus purchase', async () => {
-    await createProject('Free one')
-    await expect(createProject('Second')).rejects.toBeInstanceOf(ProjectLimitError)
-    await expect(createProject('Second')).rejects.toThrow(/plus/i)
-  })
-
   it('creates and lists projects newest-first', async () => {
-    await markWatermarkRemoved('cs_test_storage')
     const a = await createProject('Alpha')
     // createdAt ties (same-millisecond creations) make newest-first
     // ordering ambiguous — keep the assertion deterministic.
@@ -362,7 +336,6 @@ describe('storage layer', () => {
   })
 
   it('enforces the soft project cap', async () => {
-    await markWatermarkRemoved('cs_test_storage')
     for (let i = 0; i < MAX_PROJECTS; i += 1) {
       await createProject(`P${i + 1}`)
     }
@@ -450,20 +423,7 @@ describe('storage layer', () => {
     expect(await listProjects()).toHaveLength(1)
   })
 
-  it('gates landscape orientation behind the Plus purchase', async () => {
-    const project = await createProject('Free plan')
-    await expect(setProjectOrientation(project.id, 'landscape')).rejects.toBeInstanceOf(
-      PlusRequiredError,
-    )
-    await expect(setProjectOrientation(project.id, 'landscape')).rejects.toThrow(/plus/i)
-    expect((await listProjects())[0]?.orientation).toBeUndefined()
-    // Portrait is the default and never gated.
-    await setProjectOrientation(project.id, 'portrait')
-    expect((await listProjects())[0]?.orientation).toBeUndefined()
-  })
-
-  it('sets and clears the project orientation for Plus users', async () => {
-    await markWatermarkRemoved('cs_test_storage')
+  it('sets and clears the project orientation', async () => {
     const project = await createProject('Widescreen')
     const landscape = await setProjectOrientation(project.id, 'landscape')
     expect(landscape.orientation).toBe('landscape')
@@ -514,13 +474,8 @@ describe('storage layer', () => {
     expect(stored?.durationMs).toBe(900)
   })
 
-  it('creates landscape projects when asked (Plus only)', async () => {
-    await expect(
-      createProject('Free landscape', { orientation: 'landscape' }),
-    ).rejects.toBeInstanceOf(PlusRequiredError)
-
-    await markWatermarkRemoved('cs_test_storage')
-    const project = await createProject('Plus landscape', { orientation: 'landscape' })
+  it('creates landscape projects when asked', async () => {
+    const project = await createProject('Landscape', { orientation: 'landscape' })
     expect(project.orientation).toBe('landscape')
     expect((await listProjects())[0]?.orientation).toBe('landscape')
   })
@@ -528,7 +483,6 @@ describe('storage layer', () => {
   it('deleteProjectIfPristine drops an emptied project even when a lock was recorded', async () => {
     // Orientation is derived from the first take, not a standalone choice —
     // a project emptied of clips is back to its default state.
-    await markWatermarkRemoved('cs_test_storage')
     const project = await createProject()
     await setProjectOrientation(project.id, 'landscape')
 
@@ -537,7 +491,6 @@ describe('storage layer', () => {
   })
 
   it('deleteProjectIfPristine keeps projects with background music', async () => {
-    await markWatermarkRemoved('cs_test_storage')
     const project = await createProject()
     await addProjectAudioTrack({
       projectId: project.id,
@@ -841,22 +794,7 @@ describe('storage layer', () => {
     expect(await stored!.blob.text()).toBe('take-1')
   })
 
-  it('gates background music behind the Plus purchase', async () => {
-    const project = await createProject('Free plan')
-    await expect(
-      addProjectAudioTrack({
-        projectId: project.id,
-        blob: new Blob(['song'], { type: 'audio/mpeg' }),
-        mimeType: 'audio/mpeg',
-        durationMs: 30_000,
-        name: 'song.mp3',
-      }),
-    ).rejects.toThrow(/plus/i)
-    expect(await getProjectAudio(project.id)).toBeUndefined()
-  })
-
   it('builds a playlist of sequential tracks with shared settings', async () => {
-    await markWatermarkRemoved('cs_test_storage')
     const project = await createProject('With music')
     const first = await addProjectAudioTrack({
       projectId: project.id,
@@ -893,7 +831,6 @@ describe('storage layer', () => {
   })
 
   it('updates one track\u2019s playback settings with clamped trim and level', async () => {
-    await markWatermarkRemoved('cs_test_storage')
     const project = await createProject('Track settings')
     const record = await addProjectAudioTrack({
       projectId: project.id,
@@ -959,7 +896,6 @@ describe('storage layer', () => {
   })
 
   it('drops the audio playlist when the project is deleted', async () => {
-    await markWatermarkRemoved('cs_test_storage')
     const project = await createProject('Doomed')
     await addProjectAudioTrack({
       projectId: project.id,
@@ -1306,7 +1242,6 @@ describe('clip media storage', () => {
   })
 
   it('measures each project and reclaims only records no project can reach', async () => {
-    await markWatermarkRemoved('cs_test_inventory')
     const keep = await createProject('Keep')
     const other = await createProject('Other')
     const clip = await addClip({

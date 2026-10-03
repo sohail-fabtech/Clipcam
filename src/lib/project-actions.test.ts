@@ -8,7 +8,6 @@ import {
 } from './project-actions'
 import { __resetDbForTests, addClip, createProject, deleteClip, getClip, getDb, getProject, listProjects, renameProject } from './storage'
 import { makeLabeledClipBlob } from './testing/make-test-clip'
-import { markWatermarkRemoved } from './entitlement'
 import { setPlatformOverridesForTests } from './platform'
 
 function fakeBlob(label: string): Blob {
@@ -21,7 +20,6 @@ describe('loadHomeProjects', () => {
   })
 
   it('silently deletes projects left in their default state', async () => {
-    await markWatermarkRemoved('cs_test_actions')
     const kept = await createProject('Ski trip')
     const pristine = await createProject()
     const emptied = await createProject()
@@ -41,7 +39,6 @@ describe('loadHomeProjects', () => {
   })
 
   it('reports each project’s on-device size', async () => {
-    await markWatermarkRemoved('cs_test_sizes')
     const small = await createProject('Small')
     const big = await createProject('Big')
     await addClip({ projectId: small.id, blob: fakeBlob('ab'), mimeType: 'video/webm', durationMs: 700 })
@@ -99,7 +96,6 @@ describe('appendRecording orientation lock', () => {
     })
 
   it('locks landscape from the first take on a sideways-held touch device', async () => {
-    await markWatermarkRemoved('cs_test_actions')
     setPlatformOverridesForTests({ coarsePointer: true, viewportLandscape: true })
     const project = await createProject('Wide')
 
@@ -113,7 +109,6 @@ describe('appendRecording orientation lock', () => {
   })
 
   it('locks portrait (clearing any stale lock) from an upright first take', async () => {
-    await markWatermarkRemoved('cs_test_actions')
     setPlatformOverridesForTests({ coarsePointer: true, viewportLandscape: true })
     const project = await createProject('Tall')
     const first = await record(project.id, 'wide-take')
@@ -139,7 +134,6 @@ describe('appendRecording orientation lock', () => {
   })
 
   it('locks desktop from the first clip\'s pixels when size is known', async () => {
-    await markWatermarkRemoved('cs_test_actions')
     setPlatformOverridesForTests({ coarsePointer: false, viewportLandscape: false })
     const project = await createProject('Desk wide')
 
@@ -151,19 +145,6 @@ describe('appendRecording orientation lock', () => {
       height: 1080,
     })
     expect((await getProject(project.id))?.orientation).toBe('landscape')
-  })
-
-  it('saves the take even when the landscape lock is entitlement-gated', async () => {
-    // Free plan: recording is allowed sideways; the take lands and the
-    // project stays portrait when the landscape lock is Plus-gated.
-    setPlatformOverridesForTests({ coarsePointer: true, viewportLandscape: true })
-    const project = await createProject('Free wide')
-
-    const clip = await record(project.id, 'take')
-    expect(clip.id).toBeTruthy()
-    const stored = await getProject(project.id)
-    expect(stored?.clipIds).toHaveLength(1)
-    expect(stored?.orientation).toBeUndefined()
   })
 
   it('swaps a lying camera-track size to the hold when the file cannot be probed', async () => {

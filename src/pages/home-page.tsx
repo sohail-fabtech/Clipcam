@@ -10,14 +10,11 @@ import {
   IconClose,
   IconDownload,
   IconInfo,
-  IconLock,
   IconMore,
   IconPlus,
   IconShareIos,
 } from '../components/icons'
 import { TourCard } from '../components/tour-card'
-import { UpsellSheet } from '../components/upsell-sheet'
-import { RestoreSheet } from '../components/restore-sheet'
 import { RenameSheet } from '../components/rename-sheet'
 import { StorageMeter } from '../components/storage-meter'
 import { downloadBlob, shareOrDownload } from '../lib/media'
@@ -44,7 +41,6 @@ import {
 import { navigate } from '../router'
 import { formatBytes, formatStoragePercent, storageSeverity } from '../lib/storage-space'
 import {
-  FREE_PROJECTS,
   MAX_PROJECTS,
   NEW_PROJECT_ID,
   formatDuration,
@@ -76,8 +72,6 @@ export function HomePage(handle: Handle) {
   let busy = false
   let notice: string | null = null
   let showInstallHint = shouldShowIosInstallHint()
-  let upselling = false
-  let restoring = false
   let sending: ProjectSummary | null = null
   let installPopoverOpen = false
   const showcase = showcaseForHostname(location.hostname)
@@ -207,11 +201,11 @@ export function HomePage(handle: Handle) {
           await downloadBlob(backup, filename)
           notice =
             `Backup (${sizeLabel}) saved to your downloads — too large for the share sheet. ` +
-            'Open kody.video → About → Import a backup to restore it.'
+            'Open Clipcam → About → Import a backup to restore it.'
         } else {
           const outcome = await shareOrDownload(backup, filename)
           if (outcome !== 'cancelled') {
-            notice = `Backup (${sizeLabel}) saved. Open kody.video (or any Kody Video) → About → Import a backup to restore it.`
+            notice = `Backup (${sizeLabel}) saved. Open Clipcam → About → Import a backup to restore it.`
           }
         }
       } catch (err) {
@@ -235,12 +229,11 @@ export function HomePage(handle: Handle) {
         </div>
       )
     }
-    const { projects, storage, exportCacheBytes, orphanBytes, plus } = data
-    const videoQuality = data.videoQuality ?? 'standard'
+    const { projects, storage, exportCacheBytes, orphanBytes } = data
+    const videoQuality = data.videoQuality ?? 'high'
     const installable = canPromptInstall()
 
     const slots = Array.from({ length: MAX_PROJECTS }, (_, index) => projects[index] ?? null)
-    const projectLimit = plus ? MAX_PROJECTS : FREE_PROJECTS
     const severity = storage ? storageSeverity(storage.ratio) : 'ok'
     const oldestProject = projects[0] ?? null
 
@@ -522,7 +515,7 @@ export function HomePage(handle: Handle) {
                     <IconMore />
                   </button>
                 </article>
-              ) : index < projectLimit ? (
+              ) : (
                 <button
                   key={`empty-${index}`}
                   type="button"
@@ -535,22 +528,6 @@ export function HomePage(handle: Handle) {
                   </span>
                   <strong>New project</strong>
                   <small>{`Slot ${index + 1}`}</small>
-                </button>
-              ) : (
-                <button
-                  key={`locked-${index}`}
-                  type="button"
-                  className="project-slot empty locked"
-                  mix={on('click', () => {
-                    upselling = true
-                    void handle.update()
-                  })}
-                >
-                  <span className="slot-plus" aria-hidden="true">
-                    <IconLock size={22} />
-                  </span>
-                  <strong>Plus slot</strong>
-                  <small>Unlock with Kody Video Plus</small>
                 </button>
               ),
             )}
@@ -565,7 +542,6 @@ export function HomePage(handle: Handle) {
               <StorageMeter
                 storage={storage}
                 videoQuality={videoQuality}
-                plus={plus}
                 onVideoQualityChange={(next) => {
                   // Invalidate the mount/revalidation load so it cannot land
                   // after this pick and snap the control back to the stale
@@ -579,10 +555,6 @@ export function HomePage(handle: Handle) {
                     reportError(err, 'video-quality')
                     if (refreshVersion === pickVersion) refresh()
                   })
-                }}
-                onUpsell={() => {
-                  upselling = true
-                  void handle.update()
                 }}
               />
             ) : null}
@@ -616,11 +588,7 @@ export function HomePage(handle: Handle) {
             onSend={() => {
               const project = menuProject!
               menuProject = null
-              if (!plus) {
-                upselling = true
-              } else {
-                sending = project
-              }
+              sending = project
               void handle.update()
             }}
             onDelete={() => {
@@ -680,34 +648,6 @@ export function HomePage(handle: Handle) {
           />
         ) : null}
 
-        {upselling ? (
-          <UpsellSheet
-            onClose={() => {
-              upselling = false
-              void handle.update()
-            }}
-            onRestore={() => {
-              upselling = false
-              restoring = true
-              void handle.update()
-            }}
-          />
-        ) : null}
-
-        {restoring ? (
-          <RestoreSheet
-            onClose={() => {
-              restoring = false
-              void handle.update()
-            }}
-            onRestored={() => {
-              restoring = false
-              notice = 'Kody Video Plus restored — all project slots are unlocked.'
-              void handle.update()
-              refresh()
-            }}
-          />
-        ) : null}
       </div>
     )
   }

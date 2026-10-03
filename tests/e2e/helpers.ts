@@ -37,15 +37,6 @@ export async function openNewProject(page: Page): Promise<void> {
   await waitForCameraReady(page)
 }
 
-/** Home → Plus unlock → empty project camera. */
-export async function openNewPlusProject(page: Page): Promise<void> {
-  await gotoHome(page)
-  await unlockPlus(page)
-  await page.locator('.project-slot.empty').first().click()
-  await page.waitForURL(/\/project\//)
-  await waitForCameraReady(page)
-}
-
 export async function waitForCameraReady(page: Page): Promise<void> {
   const video = page.locator('.camera-video')
   await video.waitFor()
@@ -178,14 +169,6 @@ export async function openSeededProject(
   await page.goto(`/project/${projectId}`)
   await waitForCameraReady(page)
   return projectId
-}
-
-/** Unlock Kody Video Plus (6 projects, no watermark) straight in storage. */
-export async function unlockPlus(page: Page): Promise<void> {
-  await page.evaluate(async () => {
-    const entitlement = await import('/src/lib/entitlement.ts')
-    await entitlement.markWatermarkRemoved('cs_test_e2e')
-  })
 }
 
 export const IOS_SAFARI_UA =

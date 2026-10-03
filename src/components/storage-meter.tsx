@@ -13,9 +13,7 @@ import { VideoQualityPicker } from './video-quality-picker'
 interface StorageMeterProps {
   storage: StorageSpace
   videoQuality: VideoQualityPreset
-  plus: boolean
   onVideoQualityChange: (next: VideoQualityPreset) => void
-  onUpsell: () => void
 }
 
 /**
@@ -76,12 +74,7 @@ export function StorageMeter(handle: Handle<StorageMeterProps>) {
           </span>
           <VideoQualityPicker
             compact
-            plus={handle.props.plus}
             value={handle.props.videoQuality}
-            onUpsell={() => {
-              setOpen(false)
-              handle.props.onUpsell()
-            }}
             onChange={handle.props.onVideoQualityChange}
           />
           <a href="/about#video-quality">More on About</a>
