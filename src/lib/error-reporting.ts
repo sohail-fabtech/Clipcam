@@ -113,7 +113,7 @@ export function isStorageQuotaExceededEvent(event: FilterableSentryEvent): boole
 
 /**
  * Exact copy thrown by sync abortError() / sync-signaling when the user
- * cancels Plus send or receive. Optional period: Sentry sometimes drops it.
+ * cancels a send or receive. Optional period: Sentry sometimes drops it.
  */
 const SEND_CANCELLED_PHRASE = /^Send cancelled\.?$/i
 const WRAPPED_SEND_CANCELLED = /^AbortError:\s*Send cancelled\.?$/i
@@ -625,7 +625,7 @@ export function reportError(
   step: string,
   extra?: Record<string, unknown>,
 ): void {
-  // Plan/project caps are product UX (toast / upsell), not failures to triage.
+  // Project caps are product UX (toast), not failures to triage.
   if (isExpectedUserError(error)) return
   if (!isReportingHostname()) return
 
