@@ -1007,20 +1007,23 @@
 }
 
 .editor-action-label {
-  font-size: 0.68rem;
+  font-family: var(--font-mono);
+  font-stretch: 78%;
+  font-size: 0.56rem;
   font-weight: 600;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   line-height: 1;
   color: var(--ink-muted);
 }
 
 .editor-action.prominent {
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
-  color: var(--accent-text);
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 
 .editor-action.prominent .editor-action-label {
-  color: var(--accent-text);
+  color: var(--accent-ink);
   font-weight: 700;
 }
 
