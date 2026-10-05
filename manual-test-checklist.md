@@ -1,4 +1,4 @@
-# Manual test checklist — Kody Video
+# Manual test checklist — Clipcam
 
 Most of the old checklist is now asserted automatically — run it before every
 release:
@@ -21,21 +21,19 @@ npm test           # unit tests
 - **Lazy creation & plans**: "New project" creates nothing until the first
   clip (URL flips from `/project/new`); backing out leaves no project;
   recording a clip, deleting it, and backing out auto-deletes the
-  default-state project (no notification); free plan locks slots 2–6 behind
-  the Plus upsell; Plus unlocks 6 and blocks the 7th; the upsell sheet copy
-  and buttons
-- **Orientation (Plus)**: an empty project's interface follows device
+  default-state project (no notification); all 6 slots are open and the 7th
+  is blocked; no paywall, lock, or upsell appears anywhere
+- **Orientation**: an empty project's interface follows device
   rotation (touch emulation) and the first take locks it — landscape locks
   survive reload and keep the landscape interface (shell widens, right-hand
   record rail, side-by-side editor, "turn your device" hint when held the
-  other way); on the free plan rotating an empty project opens the Plus
-  upsell and the landscape take is blocked until it's turned back; desktop
-  (fine-pointer) recording never locks; landscape projects export landscape
+  other way); desktop (fine-pointer) recording locks from the clip's pixels;
+  landscape projects export landscape
   files (portrait clips center-crop; backup round-trip of the lock is
   covered by the unit suite)
-- **Location (Plus)**: capture toggle asks permission, `aria-pressed` reflects
+- **Location**: capture toggle asks permission, `aria-pressed` reflects
   state, new clips carry exact coordinates, toasts confirm on/off; export
-  toggle is off by default and hidden on the free plan
+  toggle is off by default
 - **Editor**: opens at the most recent clip; tap selects; tiles show
   filmstrip thumbnails; duplicate inserts the copy right after the selection;
   delete offers Undo; trim strip opens, dragging the end handle + Done
@@ -52,15 +50,14 @@ npm test           # unit tests
   downloads the file; "Save original clips (.zip)" downloads an archive;
   closing and tapping Go again restores the cached export instantly; editing
   clips invalidates the restore; "Re-export from scratch" renders fresh; the
-  watermark upsell shows before purchase; **no non-GET request leaves the
+  sheet shows no watermark or upsell; **no non-GET request leaves the
   device** during record/export/save/zip
 - **Projects**: slots show poster art; rename via the options sheet; delete
   uses the styled confirm (no browser dialog) and frees stored clips; backup
-  downloads a `.kodyvideo` file and import (About → Import a backup, or drop
+  downloads a `.clipcam` file and import (About → Import a backup, or drop
   the file anywhere in the app) restores it; import at the plan limit is
-  refused with a clear message; slot order is stable; Plus Send to device
-  copies a project to another browser over WebRTC; free Send opens the
-  upsell; `/receive` renders
+  refused with a clear message; slot order is stable; Send to device
+  copies a project to another browser over WebRTC; `/receive` renders
 - **Storage**: the footer storage gauge opens a "X of Y used" popover on
   tap; ≥80% shows the amber banner, ≥92%
   turns critical; the banner offers one-tap "Clear cached exports"; the boot
@@ -141,10 +138,9 @@ see the README) — plain `http://<lan-ip>` fails in most browsers.
 ### Export output quality (watch the file)
 - [ ] Exported video: clips in order, trims applied, audio in sync across
   clips with no clicks at joints, smooth frame rate
-- [ ] Watermark (before purchase): small Kody mark + domain bottom-right at
-  50% opacity; gone after purchase
+- [ ] No watermark anywhere on the exported frames
 - [ ] MP4 chapters at clip boundaries in VLC/mpv; file info shows the project
-  title, a clip-count comment, and a Kody Video / kody.video encoder credit.
+  title, a clip-count comment, and a Clipcam encoder credit.
   Tagged clips export as chapters only by default (no coordinates or filming
   date), while enabling export location adds coordinates to chapter titles, a
   median ©xyz geotag, and a capture timestamp (©day + file creation_time) from
@@ -154,18 +150,13 @@ see the README) — plain `http://<lan-ip>` fails in most browsers.
   (Synology Photos sorts by that filesystem date)
 - [ ] Export failure path offers "Save clips instead"
 
-### Purchases (Stripe, production)
-- [ ] "Remove it — $0.99" opens Stripe checkout; KODYFRIEND checks out at $0
-- [ ] After checkout, /unlocked verifies and celebrates; next export unmarked
-- [ ] "Already paid?" restore accepts the receipt link and unlocks
-
 ### PWA / persistence
 - [ ] Hard refresh restores projects and clip media
 - [ ] Airplane mode after first visit still loads the app shell; offline,
   projects open and clips play
 - [ ] **iOS installed PWA cold start:** kill the app, enable airplane mode,
   reopen from the home screen. First paint is the real app chrome (dark
-  shell + Kody hero / project slots / last screen) — never a blank white
+  shell + Clipcam hero / project slots / last screen) — never a blank white
   "loading" page under the status bar. Same check on Android standalone.
 - [ ] While online, a new deploy shows the "Update available" toast (or
   About → check for updates). Tapping Update reloads into the new build;
@@ -175,11 +166,7 @@ see the README) — plain `http://<lan-ip>` fails in most browsers.
   status bar clock, no content under the Dynamic Island
 - [ ] Opening /og-image.png directly (service worker active) shows the image,
   not the app
-- [ ] On kody-video.pages.dev, home shows the "moved to kody.video" migration
-  banner (absent on kody.video)
-- [ ] On remix.kody.video, home shows the dismissible showcase note linking
-  kody.video and PR #87; dismissing hides it across reloads (absent on
-  kody.video)
+- [ ] Older `.kodyvideo` backups still import
 - [ ] Import a backup on another domain/device: clips, trims, and geo survive
 - [ ] ≥92% storage: the record screen pill turns red and starting a recording
   shows the warning toast

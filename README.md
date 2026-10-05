@@ -1,8 +1,15 @@
-# Kody Video
+# Clipcam
 
-Mobile-first web clips camera: **hold anywhere on the preview to record**, arrange clips on a filmstrip timeline, then tap **Go** to export/share — all **on-device**.
+![Clipcam — hold to record, tap Go to share](./public/og-image.png)
 
-Kody Video is inspired by the OK Video interaction model: camera-first capture, quick clip cleanup, and one big OK/share moment. It is an independent project with its own name, mark, and implementation; it is not affiliated with OK Video and does not use OK Video trademarks or assets. The koala mascot is credited to the KCD community / [kentcdodds.com/kody](https://kentcdodds.com/kody). App artwork in `public/art/` was generated from that Kody reference (camera, timeline, share, app icon).
+Mobile-first web clips camera: **hold anywhere on the preview to record**, arrange clips on a filmstrip timeline, then tap **Go** to export or share one video — all **on your device**.
+
+- **Free, every feature.** No subscription, no purchase, no watermark on your videos.
+- **Private by construction.** No accounts, no uploads, no analytics, no tracking.
+- **Works offline.** An installable PWA; projects live in the browser's own storage.
+- **Open source.**
+
+Made by **Sohail Khan** — [me.jscrate.dev](https://me.jscrate.dev).
 
 ## Quick start
 
@@ -11,104 +18,72 @@ npm install
 npm run dev
 ```
 
-Open the printed localhost URL in Chrome (desktop or Android). Camera/microphone require a **secure context** (`http://localhost` or HTTPS).
+Open the printed localhost URL in Chrome (desktop or Android). Camera and microphone require a **secure context** (`http://localhost` or HTTPS). Node **24.3+** is required.
 
 ```bash
-npm run build      # production build + service worker
+npm run build      # typecheck + production build + service worker
 npm run preview    # serve dist (PWA cache active)
-npm test           # storage/export-planner unit tests (Vitest browser mode, real Chromium)
-npm run test:e2e   # Playwright e2e suite (fake camera/mic; recording, editor, playback, export, plans)
-npm run test:smoke # Playwright UX smoke (fake camera, records + exports)
+npm test           # unit tests (Vitest browser mode, real Chromium)
+npm run test:e2e   # Playwright e2e suite (fake camera/mic)
+npm run test:smoke # Playwright UX smoke: record → edit → export
+npm run icons      # regenerate every icon + the social card from public/logo.svg
 ```
 
-**Live app:** [https://kody.video](https://kody.video) (Cloudflare Pages, builds from `main`)
+For a phone on the same network, use your machine's LAN URL over HTTPS, or a tunnel (`npm run dev -- --host` plus a trusted tunnel). `getUserMedia` fails on plain `http://<lan-ip>` in most browsers.
 
-For a phone on the same network, use your machine’s LAN URL over HTTPS, or tunnel (`npm run dev -- --host` plus a trusted tunnel). `getUserMedia` will fail on plain `http://<lan-ip>` in most browsers.
+## Features
 
-## What works
+Everything below is free and runs on the device.
 
+### Capture
 - Full-bleed live camera (rear preferred; flip, torch, and zoom when the device exposes them)
 - Hold-to-record anywhere on the preview; drag up/down while holding to zoom
+- Lens chip for ultra-wide/telephoto cameras where the browser exposes them
+- **1080p High quality** by default, or Standard / Saver (720p) to save space — always 30 fps
 - Self-timer for hands-free takes (tap to stop)
-- Recording feedback (REC pill + elapsed) with a page that does **not** re-render per frame — capture stays smooth
-- Editor: filmstrip timeline (thumbnails, width ∝ duration), drag to reorder, duplicate, delete w/ undo, **in-timeline trim with drag handles**, **add clips and photos from your device/gallery**
-- **Photos on the timeline**: a picked image becomes a still clip (3s by
-  default) that plays in previews and exports like any other clip — silent,
-  with a small camera badge on its tile. Instead of the trim strip, photos
-  open a **Duration** strip: because a still has no media length to trim
-  within, its on-screen time is a free choice that can grow as well as
-  shrink — drag the handle across a 0–30s scale, tap a preset (1/2/3/5/10s),
-  or nudge with ±0.5s steppers to land the exact length, with the precise
-  readout always visible. Photos travel in backups and duplicate/reorder
-  like clips
-- **Per-clip audio levels**: every clip's audio is **peak-normalized** as a
-  post-recording step (measured once, persisted on the clip, backfilled
-  automatically when an older project loads), so takes recorded at
-  different distances play back at consistent loudness — in the previews
-  and in the export. Selecting a clip in the timeline shows a **Clip
-  sound** slider: the clip's own volume, 0–100% (default 100%), applied
-  with or without music
-- **Background music** (Plus): build a playlist of audio tracks that play one
-  after the other under the film (nothing loops — a hint suggests adding
-  another track when the music ends before the film does). Each track
-  carries its own **volume** (default 25% — normalized music sits under
-  speech), set in the track's **detail view** (the audio counterpart of
-  the clip trim view: trim the track to a kept window over its waveform,
-  set its volume, and toggle its fade in/out — on by default; each track
-  eases in where it starts and out where it ends, including the film's
-  edges). The selected clip additionally gets a **Music** slider that
-  ducks the playing track's volume during that clip (0–100%, default
-  100%) — the clip's own sound and the music are independent dials, and
-  the blend hard-clamps rather than coupling them. Volume changes glide
-  across clip boundaries. All of it — volumes, normalization, fades,
-  trims, track hand-offs — plays the same in the previews as in the
-  exported file: the project preview runs the whole film's bed, and the
-  editor's clip stage plays the music under the selected clip from its
-  exact spot on the film's timeline (normalization boosts cap at the
-  browser's volume ceiling in previews)
-- **Landscape projects** (Plus): no setting — rotate the phone. While a
-  project has no clips its interface follows how the device is held, and
-  the **first take locks the orientation** (emptying the project of clips
-  lets the next first take decide again). Landscape shifts the
-  entire interface: the phone-shaped shell widens to the viewport, the
-  record controls become a right-hand rail, the editor puts the player
-  beside the timeline, and hints ask for a turn whenever the device
-  mismatches the locked project. Exports are forced into a landscape
-  project's orientation (mismatched clips center-crop), and the lock
-  travels in backups. On the free plan, rotating an empty project previews
-  the landscape interface but the take that would lock it opens the Plus
-  upsell. Desktop is exempt (webcams and screen shares are landscape media
-  without that being a choice): its projects stay unlocked and exports
-  follow the clips, as always
-- Project preview playback: tap edges to skip clips, tap middle to stop
-- Up to **6** stable project slots (create / open / rename / delete, poster art from your clips)
-- Big Go CTA: on-device export to **one video file**, then Share (system sheet) or Save
-- Fallback: save clips as separate files
-- Project **backup/import**: one `.kodyvideo` file per project (clips, trims,
-  location data, background music + volumes) — a safety net, and the way to
-  move a project between devices or browser origins (storage is per-origin);
-  ⋯ → Save backup on a slot, import from the About page or by dropping a
-  `.kodyvideo` file anywhere in the app
-- **Send to another device** (Plus): a pairing code + QR introduces two
-  browsers; the `.kodyvideo` travels over a WebRTC DataChannel (STUN only —
-  same Wi‑Fi usually). Clips never land on our servers. Receiving is free
-  at `/receive`. If the devices cannot connect, Save backup still works
-- Installable PWA (manifest + Workbox service worker for the app shell)
-- **No accounts, no uploads, no analytics**
+- Optional **location tagging** of new clips (off by default)
+- Microphone chooser when more than one mic is connected; live "mic isn't picking up sound" warning
+- **Screen recording** on desktop (screen, window, or tab, with mic narration)
+- Recording feedback (REC pill + elapsed) that never re-renders the page per frame, so capture stays smooth
 
-Most QA is automated: `npm run test:e2e` runs the Playwright suite in
-`tests/e2e/` (~40s). See [`manual-test-checklist.md`](./manual-test-checklist.md)
-for what it covers and the remaining real-device-only checks.
+### Edit
+- Filmstrip timeline: thumbnails sized by duration, drag to reorder, duplicate, split, delete with Undo
+- **In-timeline trim** with drag handles
+- Add clips and **photos** from your device; a photo becomes a still clip (3 s by default) with a free **Duration** control (0–30 s, presets, ±0.5 s steppers)
+- **Per-clip audio**: every clip is peak-normalized automatically; a **Clip sound** slider sets each clip's own volume
+- **Background music**: a playlist of tracks under the film, each with its own trim, volume, and fade in/out; a per-clip **Music** slider ducks the music during that clip. Previews play exactly what the export will contain
+- **Landscape projects**: rotate the phone. An empty project follows how the device is held, and the first take locks the orientation. The whole interface adapts (record rail, side-by-side editor), and exports follow the project's orientation
+- Crop or letterbox per clip when a clip doesn't match the film's shape
+- Project preview playback: tap the edges to skip clips, the middle to stop
+
+### Share
+- Big **Go** button: on-device export to **one video file** (MP4 preferred), then Share (system sheet) or Save
+- No watermark, ever
+- Save original clips as a `.zip`
+- **Backups**: one `.clipcam` file per project (clips, trims, location, music and volumes) — a safety net and the way to move projects between devices or browsers. Older `.kodyvideo` backups import too
+- **Send to device**: a pairing code + QR introduces two browsers; the project travels over a WebRTC DataChannel. Clips never touch a server. Receive at `/receive`
+
+### Projects
+- Six stable project slots, each shown as a pass with its clip count, length, and size
+- Projects that are new (imported or received) or changed since you last opened them stay highlighted until you open them
+- Projects are created lazily: an untouched "New project" leaves nothing behind
+
+## Design
+
+Clipcam's interface is built on a **boarding pass & gate board** visual system:
+
+- Ink and white panels, one **alert yellow** reserved for what's active or just changed, and a red dot only while recording
+- Condensed mono uppercase labels (**Martian Mono**), monumental numerals (**Barlow Condensed**), and the system UI face for body text, all self-hosted so the app looks the same offline
+- Tabular figures for every number, 1px hairline dividers, perforated sheet edges, no gradients or glows
+- Light and dark themes follow the system setting; the camera stage is always dark
+
+The logo (`public/logo.svg`) is the single source for every icon. `npm run icons` renders the favicon, Apple touch icon, PWA icons (including a real **maskable** icon with the art inside the 80% safe zone), and the 1200×630 social card with the Playwright Chromium the project already installs.
+
+Product facts and principles live in [`PRODUCT.md`](./PRODUCT.md).
 
 ## Architecture
 
-Built with [Remix 3](https://github.com/remix-run/remix) (`remix@3.0.0`,
-pinned) as a pure client-side app: `remix/component` components rendered
-with `createRoot`, no server rendering. Routing stays a
-tiny in-app `history` router (see `router.tsx`) rather than `remix/spa`, whose
-frame navigation falls back to full document loads in browsers without the
-Navigation API + `NavigateEvent.sourceElement` (Firefox, older iOS Safari) — a
-reload mid-recording is not acceptable for a camera app.
+Built with [Remix 3](https://github.com/remix-run/remix) (`remix@3.0.0`, pinned) as a pure client-side app: `remix/component` components rendered with `createRoot`, no server rendering. Routing is a tiny in-app `history` router (`router.tsx`) rather than `remix/spa`, because a full document reload mid-recording is not acceptable for a camera app.
 
 ```
 src/
@@ -118,268 +93,128 @@ src/
   lib/recorder.ts           Hold-to-record MediaRecorder wrapper (hardware-codec aware)
   lib/media.ts              getUserMedia/permissions/share/download helpers
   lib/thumbs.ts             Filmstrip thumbnail generation (stored per clip)
-  lib/sync-*.ts             Plus send-to-device (WebRTC + /api/sync matchmaker)
+  lib/sync-*.ts             Send to device (WebRTC + /api/sync matchmaker)
+  lib/seen-projects.ts      Home "held change" highlight (per device)
   lib/sheet-modal.ts        Bottom-sheet modality (focus trap, Esc, sheet stack)
   lib/export/               Export engines (see below)
   components/record-screen  Camera surface (capture, zoom, timer, dock)
   components/editor-screen  Timeline, trim, clip actions
-  pages/                    Home (project slots) + Project (record/editor shell)
+  pages/                    Home, Project (record/editor shell), About, Receive, legal
   router.tsx                Tiny client router (route-pattern matching + history)
+functions/                  Cloudflare Pages Functions (sync matchmaker, diag, recover, agent markdown)
+scripts/                    Icon generator, dev sync API, probes and smoke tests
 ```
-
-### Chapters & file metadata
-
-MP4 exports carry **chapter markers** at every clip boundary (Nero `chpl`,
-injected post-mux by `lib/export/mp4-metadata.ts`), titled with each clip's
-time of day (no calendar date), plus QuickTime text tags: the project title
-(`©nam`), a short composition note (`©cmt` / `©des` — clip and photo counts,
-duration, music), and an encoder credit (`©too`) pointing at
-[kody.video](https://kody.video). Kody Video Plus users can opt into
-**location tagging** on the record screen; clips then store device coordinates
-in IndexedDB alongside the clip, never inside the MediaRecorder blob. Exports
-omit those coordinates — and filming dates — by default, so a public share
-does not disclose where or when it was made. A separate Plus-only export
-toggle adds calendar dates and coordinates to chapter titles, a `©xyz` geotag
-at the median of the majority cluster of clip locations (within 5 km), falling
-back to the last located clip, and a capture timestamp (`©day` plus
-`mvhd`/`tkhd` creation_time) from the last timeline video that has one — so a
-Photos library can place the film on the right day and map pin. Share and Save
-also stamp `File.lastModified` from that same last-clip time (Web Share copies
-it onto the filesystem created/modified dates). Synology Photos sorts by those
-file dates rather than the MP4 atoms. WebM exports skip this injection (the
-WebM subset of Matroska excludes chapters). Clips recorded before this feature
-simply lack the data and degrade gracefully.
 
 ### Export pipeline
 
 `lib/export/` stitches clips into one file with two engines:
 
-1. **Mediabunny + WebCodecs (preferred, all Chromium + recent Firefox/Safari):** each clip's own samples are demuxed and decoded directly by [Mediabunny](https://mediabunny.dev) (no playback pacing — the frame supply runs at hardware speed, keeps working in background tabs, and honors file rotation metadata), composited onto one canvas with the watermark, and encoded/muxed by Mediabunny, which owns the codec-config/packet-ordering/container details. Audio is decoded per clip and appended **sample-accurately**, so audio can never drift across clips; backpressure comes from awaiting the encoder. Container/codec negotiation strongly prefers **MP4 (H.264/HEVC + AAC)** — the most shareable output everywhere — and only falls back to **WebM (VP9/VP8 + Opus)** on non-iOS platforms without MP4 encoders. Clips WebCodecs can't decode take a realtime element-pump fallback per clip.
-2. **Realtime fallback:** the old `canvas.captureStream` + `MediaRecorder` stitcher, hardened with timeouts and degenerate-segment skipping, for browsers without WebCodecs.
+1. **Mediabunny + WebCodecs (preferred):** each clip's samples are demuxed and decoded directly by [Mediabunny](https://mediabunny.dev) (no playback pacing, hardware speed, works in background tabs, honors rotation metadata), composited onto one canvas, and encoded/muxed by Mediabunny. Audio is decoded per clip and appended **sample-accurately**, so audio never drifts. Output prefers **MP4 (H.264/HEVC + AAC)** and falls back to **WebM (VP9/VP8 + Opus)** only where MP4 encoders are missing.
+2. **Realtime fallback:** `canvas.captureStream` + `MediaRecorder`, hardened with timeouts and degenerate-segment skipping, for browsers without WebCodecs.
 
-`plan.ts` is a pure, unit-tested planner that clamps trims and drops unplayable segments up front. The share flow completes the export **first**, then Share/Save run on fresh taps so the Web Share API always has the user activation it requires.
+`plan.ts` is a pure, unit-tested planner that clamps trims and drops unplayable segments. Export completes **first**; Share/Save then run on fresh taps so the Web Share API has the user activation it requires.
+
+### Chapters & file metadata
+
+MP4 exports carry **chapter markers** at every clip boundary (Nero `chpl`, injected post-mux by `lib/export/mp4-metadata.ts`) titled with each clip's time of day, plus QuickTime tags: the project title (`©nam`), a short composition note (`©cmt` / `©des`: clip and photo counts, duration, music), and an encoder credit (`©too`: Clipcam). Location and filming dates are **left out by default** so a public share never discloses where or when it was made; an export toggle adds dates and coordinates to chapter titles, a `©xyz` geotag, and a capture timestamp so photo libraries place the film correctly. Share and Save stamp `File.lastModified` from the last clip. WebM exports skip chapters (the WebM Matroska subset excludes them).
 
 ### Recording quality
 
-- Phones prefer **hardware H.264** (`video/mp4`/`h264` MediaRecorder types) over software VP9 — software encoding is what makes previews and clips drop frames on Android.
-- Capture stays at **30fps** (no dropped-frame shortcuts). About → **Video quality** picks the size/bitrate for *new* clips. Without Plus the default is **Standard** (720p). **High** (1080p, about 10 Mbps) is a Plus perk; **Saver** is 720p at a smaller bitrate. Already-saved clips are left alone. Bitrate still scales with the actual track size.
-- A live MediaRecorder is armed on the record screen so the hardware encoder is already past its ~170ms startup hole when the user presses; the take adopts that session and trims the pre-roll.
-- During a take the live viewfinder stays on screen; the extra thumb-mirror `<video>` is attached only at lift so the hold has two video sinks (overlay + encoder clone), not three. Record clones get `contentHint: motion`, and the encoder is not sliced every 250ms.
-- Clip duration is measured from the encoded media after stop (wall-clock time includes encoder startup latency and corrupts trim/export math).
-- The elapsed timer is a leaf component mutating its text node directly from a 10Hz boundary-aligned timer (a per-frame rAF loop would force 60 main-thread frames/s), so the ticking readout never re-renders the page during capture.
-- Chromium's MediaRecorder drops recorded frames once the main thread stalls for ~200ms, so optional post-take work (clip hydration: container parses, audio-peak decode) waits while a take is recording (`lib/capture-activity.ts`). Saving the previous take never waits.
-- Drag-to-zoom camera writes are coalesced: one `applyConstraints` in flight, at most one per camera frame, latest value wins (`lib/zoom-writer.ts`).
-- Every take writes an on-device **recording-health report**: the saved file's real frame cadence (read from its timestamps, never its pixels), plus main-thread stalls, zoom, backgrounding, and encoder/save timings from the take. About → **Recording health** summarizes them and can share, copy, or (on kody.video) send the counters-only JSON. See [`docs/recording-smoothness.md`](docs/recording-smoothness.md) for findings and how to read a report.
-- A screen wake lock is held while recording.
-- Exports keep 1080p (long edge 1920), hold the last frame across source gaps so timestamp holes become a freeze instead of a hitch, and only drop frames closer than half a 30fps tick (jittery 30fps stays; 60fps extras go).
+- Phones prefer **hardware H.264** MediaRecorder types over software VP9 (software encoding drops frames on Android).
+- Capture stays at **30 fps**. About → **Video quality** picks size/bitrate for *new* clips: **High** (1080p, default), **Standard** (720p), or **Saver** (720p, smaller bitrate).
+- A live MediaRecorder is armed on the record screen so the hardware encoder is past its ~170 ms startup hole when you press; the take trims the pre-roll.
+- Clip duration is measured from the encoded media after stop.
+- The elapsed timer is a leaf component updated at 10 Hz, so the readout never re-renders the page during capture.
+- Optional post-take work waits while a take is recording (`lib/capture-activity.ts`); zoom writes are coalesced (`lib/zoom-writer.ts`).
+- Every take writes an on-device **recording-health report** (frame cadence, stalls, encoder/save timings). About → **Recording health** summarizes them; share or copy them yourself. See [`docs/recording-smoothness.md`](docs/recording-smoothness.md).
+- A screen wake lock is held while recording and exporting.
 
 ### Remix data flow (explicit updates, no hooks)
 
-- **Components** are Remix 3 setup + render functions: state lives in plain
-  setup-scope variables, re-renders happen only on explicit `handle.update()`.
-- **Pages own their data**: each page loads IndexedDB state in setup and
-  exposes `refresh()`; mutations write storage then call `refresh()`.
-- **Camera** attaches via the **`ref()` mixin** (start on insert, stop when
-  the element's abort signal fires).
-- **Blob URLs** bind/revoke in `ref()` mixins (`BlobVideo`, `BlobImage`,
-  `TimelineThumbImage`), re-synced from render when the blob changes.
+- **Components** are Remix 3 setup + render functions: state lives in setup-scope variables; re-renders happen only on explicit `handle.update()`.
+- **Pages own their data**: each page loads IndexedDB state in setup and exposes `refresh()`; mutations write storage then call `refresh()`.
+- **Camera** attaches via the `ref()` mixin (start on insert, stop when the element's abort signal fires).
+- **Blob URLs** bind/revoke in `ref()` mixins (`BlobVideo`, `BlobImage`, `TimelineThumbImage`).
 - **Sheets** reset with `key={id}`; modality comes from `lib/sheet-modal.ts`.
-- **Timers / toasts** use `requestAnimationFrame` / `setTimeout` started from event handlers.
 
-### Storage (refresh-safe + personal)
+### Storage
 
 | Store    | Contents                                              |
 |----------|-------------------------------------------------------|
 | projects | JSON metadata + ordered `clipIds`                     |
 | clips    | Clip metadata, `Blob` media, filmstrip thumbnails     |
 | undo     | Last deleted clip per project (for Undo)              |
-| meta     | Settings (`maxProjects`, last opened id, onboarding)  |
+| meta     | Settings (`maxProjects`, last opened id, onboarding, video quality) |
 | audio    | Background-music playlist per project (blobs, per-track trims/volumes/fades) |
 
-Database name: `kody-video`. Blobs never leave the device unless the user explicitly shares/downloads.
+The IndexedDB database keeps its original name, `kody-video`, so projects made before the rename keep working. Blobs never leave the device unless you share, save, back up, or send them.
 
 ### Offline / PWA
 
-`vite-plugin-pwa` generates a service worker that precaches the app shell (`html/js/css/icons`). After the first successful visit:
+`vite-plugin-pwa` precaches the app shell (HTML, JS, CSS, icons, fonts). After the first visit:
 
-1. Airplane mode still loads the SPA from Cache Storage (and from HTTP cache of the last-known HTML — installed PWAs must not wait on the network to paint).
-2. Project/clip data continues to come from IndexedDB.
-3. A newer deploy never replaces the open UI with a blank/loading screen; the existing "Update available" toast (or About → check) applies it on demand.
+1. Airplane mode still loads the app from Cache Storage.
+2. Project and clip data come from IndexedDB.
+3. A newer deploy never replaces the open UI; an "Update available" toast (or About → check) applies it on demand.
 
-Installed / standalone launches (iOS especially) keep the last-known shell on screen from the first paint. The default iOS splash is white; the document itself must paint the app chrome immediately so that splash cannot stick. Recovery paths that drop the service worker are skipped while offline — wiping the only cached copy is the white screen of death.
+Verify with `npm run build && node scripts/probe-pwa-offline.mjs`, or `npm run preview`, load once, then go offline in DevTools and reload.
 
-Verified approach: `npm run build && node scripts/probe-pwa-offline.mjs` (load once online, then block the network and reload, including a simulated standalone display-mode). Or `npm run preview`, load once, then DevTools → Network → Offline (or OS airplane mode) and reload.
+## Deploying
+
+Clipcam deploys as static files plus a few Pages Functions on **Cloudflare Pages** (`npm run build`, output `dist/`). All app links are relative, so it works on any domain.
+
+- Optional KV namespace binding **`SYNC_ROOMS`** enables Send to device matchmaking (room codes + WebRTC descriptions only, never media). Without it, Send shows a configuration error and Save backup still works.
+- If the app ever opens to the hero with no project slots (a stale cached shell), two always-fresh pages help: `/api/diag` (read-only diagnostics) and `/api/recover` (drops the service worker and cached files; never touches IndexedDB).
 
 ## Browser limits
 
-- **iOS Safari:** WebCodecs audio support is incomplete; the realtime fallback engine covers it, but Chromium (especially Android) is the primary target.
-- **iOS microphone:** WebKit can deliver muted audio tracks when mic and camera come from separate `getUserMedia` calls, so on iOS the mic is acquired together with the camera and held while the preview is open (everywhere else the mic is grabbed per-take). A live level monitor warns "Mic isn't picking up sound" during silent takes on every platform.
-- **External mics on iOS (DJI transmitters, AirPods, wired headsets):** iOS pins web capture to the built-in mic by
-  default. After the camera opens, the app kicks WebKit's `navigator.audioSession` into
-  `play-and-record` — the documented nudge that re-routes capture to a connected external mic —
-  and restores the session when the camera closes. Best-effort: routing remains OS-controlled.
-- **Permissions:** denied camera/mic must be re-enabled in site settings; the UI surfaces this.
-- **Storage quotas:** large projects can hit IndexedDB quotas; the soft 6-project cap helps.
-- **Background tabs:** recording should stay in the foreground; browsers may throttle capture.
-- **Ultra-wide (0.5×):** Android usually exposes the ultra-wide/telephoto as *separate* rear
-  cameras, not as zoom below 1× — the lens chip next to the zoom chips switches between them.
-  Some devices don't expose the extra lenses to browsers at all; the chip is hidden there.
-  Phones that expose Android's *logical multi-camera* to the browser (zoom range below 1×,
-  common on Samsung) get native-style seamless lens hand-off through the zoom gesture instead —
-  the app detects such a lens the first time it's opened (cycle the chip once) and locks onto
-  it for future sessions. Switching lenses with the chip afterward replaces that memory (your
-  explicit choice always wins); opening the seamless lens again re-locks it. iPhones always
-  work this way via the OS multi-lens camera.
+- **iOS Safari:** WebCodecs audio support is incomplete; the realtime fallback covers it, but Chromium (especially Android) is the primary target.
+- **iOS microphone:** WebKit can deliver muted tracks when mic and camera come from separate `getUserMedia` calls, so on iOS the mic is acquired with the camera. External mics are nudged via `navigator.audioSession` (best effort; routing is OS-controlled).
+- **Permissions:** a denied camera/mic must be re-enabled in site settings; the UI explains how.
+- **Storage quotas:** large projects can hit IndexedDB quotas; the six-slot cap and the storage gauge help.
+- **Ultra-wide (0.5×):** Android usually exposes extra lenses as separate cameras (the lens chip switches between them); some devices don't expose them to browsers at all.
 
 ## Desktop keyboard support
 
-Kody Video is designed as a mobile camera app, but desktop gets first-class
-keyboard support (hints appear automatically on fine-pointer devices):
+Hints appear automatically on fine-pointer devices.
 
-- **Camera:** hold `Space` to record (release to stop), `F` flip, `T`
-  self-timer, `S` screen recording, `E` editor, `P` play preview, `Delete`
-  remove last clip.
-- **Editor:** `←`/`→` select clip, `Alt`+arrows reorder, `T` trim, `D`
-  duplicate, `Delete` delete, `P` play, `Esc` back to camera (or exit trim).
+- **Camera:** hold `Space` to record, `F` flip, `T` self-timer, `S` screen recording, `E` editor, `P` play, `Delete` remove last clip.
+- **Editor:** `←`/`→` select clip, `Alt`+arrows reorder, `T` trim, `D` duplicate, `Delete` delete, `P` play, `Esc` back.
 - **Playback:** `←`/`→` skip clips, `Space` pause/resume, `Esc` close.
-
-## Screen recording (desktop)
-
-The monitor button on the camera view (or `S`) records a screen, window, or
-tab as a regular clip — pick the surface, narrate over your mic (mixed with
-shared tab/system audio when you opt in), then tap the preview or the button
-to stop and the take lands on the filmstrip like any camera clip. Desktop
-browsers only: `getDisplayMedia` does not exist on iOS or Android, so on
-phones use the OS screen recorder instead. The button hides itself where the
-API is missing.
-
-## Kody Video Plus purchase
-
-The free plan includes one project, and exports carry a small Kody Video mark
-in the corner. Kody Video Plus — a one-time $0.99 Stripe Payment Link —
-removes the watermark, unlocks six project slots, 1080p High quality,
-background music, landscape projects, and sending a project to another
-device: the export
-sheet (or a locked home slot, the locked "Add music" button in the editor,
-or rotating an empty project sideways on the free plan) links to checkout,
-Stripe redirects back to `/unlocked?session_id=…`, and a single Cloudflare
-Pages Function (`functions/api/verify-purchase.ts`) verifies the session
-server-side before the entitlement is stored in IndexedDB. 100%-off
-promotion codes (friends / the developer) flow through the exact same
-verification. Restore on another device: on the phone or computer that
-already has Plus, open About and tap "Use Plus on another
-device" — type the short code or scan the QR. "Already paid?"
-on the export sheet still accepts that code (or a checkout
-session id).
-
-Projects are also created lazily — "New project" opens the camera at
-`/project/new` and nothing is persisted until the first clip is recorded, so
-backing out of an untouched project leaves no empty slot behind. The same
-holds after creation: a project exited while still in its default state (no
-clips, default name, no music) is silently deleted when the home screen
-loads, since keeping it would change nothing the user can see.
-
-Deployment requirements on the Cloudflare Pages project:
-
-- `STRIPE_SECRET_KEY` (a restricted key with Checkout Sessions read access
-  is enough)
-- KV namespace binding `SYNC_ROOMS` for Plus send-to-device matchmaking
-  (room codes + WebRTC descriptions only; never media). Without it, Send
-  shows a configuration error and Save backup still works.
-
-## Rewrite showcases
-
-The app has been implemented four times as an experiment series, and every
-edition stays online as a living showcase. Each deployment carries a
-dismissible banner pointing back to the real app and to the PR where the
-agent analyzed that edition:
-
-| Origin | Edition | Analysis |
-|--------|---------|----------|
-| [kody.video](https://kody.video) | Remix 3 (this branch — production) | — |
-| [remix.kody.video](https://remix.kody.video) | Remix 3 rewrite preview (proxies production) | [PR #87](https://github.com/kentcdodds/kody-video/pull/87) |
-| [react.kody.video](https://react.kody.video) | React 19 + React Router 7 (pre-rewrite, branch `cursor/react-legacy-b52b`) | [PR #87](https://github.com/kentcdodds/kody-video/pull/87) |
-| [vanilla.kody.video](https://vanilla.kody.video) | Web components, no build, no deps (branch `vanilla`) | [PR #88](https://github.com/kentcdodds/kody-video/pull/88) |
-| [typescript.kody.video](https://typescript.kody.video) | The vanilla app in strict TypeScript, `tsc`-only build (branch `typescript`) | [PR #89](https://github.com/kentcdodds/kody-video/pull/89) |
-
-Storage is per-origin, so projects recorded on a showcase stay there — use
-backup/import to move them to [kody.video](https://kody.video).
-
-## Support
-
-Email [team@kody.video](mailto:team@kody.video) or open a GitHub issue (the
-in-app About page has a link that pre-fills device details).
-
-If the app opens to just the Kody hero with no project slots (a stale or
-poisoned cached shell), two always-fresh pages ship with the app — served
-under `/api/` so no service worker or cached shell can interfere:
-
-- [kody.video/api/diag](https://kody.video/api/diag) — on-device, read-only
-  diagnostics: confirms your projects/clips are present in IndexedDB, checks
-  the cached vs network shell, and probes whether the app can mount.
-- [kody.video/api/recover](https://kody.video/api/recover) — one-tap repair:
-  drops the service worker and cached app files and re-primes them fresh.
-  Never touches IndexedDB, so projects and clips are safe.
 
 ## Privacy
 
-- No accounts, no cookies, no cross-site tracking.
-- Page views are counted with [Fathom Analytics](https://usefathom.com)
-  (cookieless, anonymous, aggregate-only), loaded only on production
-  hostnames.
-- No clip upload endpoints exist in this app.
-- Share/export uses user-gesture download or the Web Share API only.
-- Network calls besides Stripe checkout (opened in the browser): the
-  purchase-verification function above (never sees media); anonymous
-  Sentry crash reports (error + stack trace only — breadcrumbs and request
-  metadata are stripped in the SDK config; no PII, no media; only from
-  production hostnames — dev and tests never report); and, only when you
-  tap Send to device, a short-lived `/api/sync` matchmaking room (code +
-  WebRTC descriptions, never clips). Export and import failures the UI
-  surfaces as friendly messages are also captured, tagged with the failing
-  step, so real-device bugs surface.
-- The home-screen tour video (shown to first-time users) streams from
-  `media.kody.video` (an R2 bucket behind the app's own zone — no third-party
-  player, no tracking) and only when the user taps play on it.
+- No accounts, no cookies, no analytics, no crash reporting, no cross-site tracking.
+- No clip upload endpoints exist.
+- Share and export use a user-gesture download or the Web Share API only.
+- The only network call the app makes on its own is a short-lived `/api/sync` matchmaking room, and only when you tap Send to device.
 
 ## Scripts
 
-| Command                              | Purpose                                    |
-|--------------------------------------|--------------------------------------------|
-| `npm run dev`                        | Vite dev server                            |
-| `npm run build`                      | Typecheck + production bundle              |
-| `npm run preview`                    | Preview production build                   |
-| `npm test`                           | Vitest storage/export-planner tests (browser mode, Chromium) |
-| `npm run test:e2e`                   | Playwright e2e suite (`tests/e2e/`): recording, editor, playback, export, plans, keyboard |
-| `npm run test:smoke`                 | Playwright smoke: record → edit → export   |
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Vite dev server |
+| `npm run build` | Typecheck + production bundle |
+| `npm run preview` | Preview the production build |
+| `npm test` | Vitest unit tests (browser mode, Chromium) |
+| `npm run test:e2e` | Playwright e2e suite (`tests/e2e/`) |
+| `npm run test:smoke` | Playwright smoke: record → edit → export |
+| `npm run icons` | Render all icons + the social card from `public/logo.svg` |
 | `node scripts/probe-export-chrome.mjs` | Export validation in Chrome stable (real codecs) |
-| `node scripts/probe-keyboard.mjs`    | Desktop keyboard flows (record/edit/playback) |
-| `node scripts/probe-rear-lens.mjs`   | Rear lens switching (ultra-wide) with fake cameras |
-| `node scripts/probe-fast-export.mjs` | Decode-driven export beats realtime (MP4 clips) |
-| `node scripts/probe-mic-monitor.mjs`  | Silent-mic warning fires (and clears) correctly |
-| `node scripts/probe-install-hint.mjs` | iOS install hint shows/dismisses per user agent (needs `npm run build`) |
-| `node scripts/probe-pwa-offline.mjs` | Installed-PWA cold start: offline / standalone still paints the shell, never a white document (needs `npm run build`) |
-| `node scripts/probe-deployed-remix.mjs` | Live smoke against a deployed origin (defaults to remix.kody.video) |
+| `node scripts/probe-keyboard.mjs` | Desktop keyboard flows |
+| `node scripts/probe-rear-lens.mjs` | Rear lens switching with fake cameras |
+| `node scripts/probe-fast-export.mjs` | Decode-driven export beats realtime |
+| `node scripts/probe-mic-monitor.mjs` | Silent-mic warning fires and clears |
+| `node scripts/probe-install-hint.mjs` | iOS install hint per user agent (needs `npm run build`) |
+| `node scripts/probe-pwa-offline.mjs` | Offline / standalone cold start paints the shell (needs `npm run build`) |
 | `node scripts/probe-screen-record.mjs` | Desktop screen recording lands as a clip |
-| `node scripts/probe-touch-timeline.mjs` | Touch timeline gestures (scroll, long-press lift) |
-| `node scripts/probe-webkit.mjs`      | WebKit engine sanity + feature matrix (iOS proxy, not a substitute for a real device) |
+| `node scripts/probe-touch-timeline.mjs` | Touch timeline gestures |
+| `node scripts/probe-webkit.mjs` | WebKit engine sanity + feature matrix |
 
-## Contributing
+## Credits
 
-Outside pull requests to this repository need a signed inbound
-[Contributor License Agreement](./docs/contribute/inbound-contributions.md).
-See [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+Clipcam is built on [Kody Video](https://github.com/kentcdodds/kody-video) by Kent C. Dodds. Its hold-to-record interaction model is inspired by [OK Video](https://okvideo.app) by Pim Coumans. Clipcam is an independent project and is not affiliated with either.
 
 ## License
 
-Kody Video is licensed under the
-[Functional Source License, Version 1.1, ALv2 Future License](./LICENSE)
-([FSL-1.1-ALv2](https://fsl.software/)). You can use, copy, modify, create
-derivative works from, publicly perform, publicly display, and redistribute the
-software for any purpose other than Competing Use. Competing Use means making
-the software available to others in a commercial product or service that
-substitutes for Kody Video, substitutes for another product or service the
-licensor offers using Kody Video that existed when the version was made
-available, or offers the same or substantially similar functionality. Each
-version becomes available under the Apache License 2.0 on the second anniversary
-of the date that version was made available.
+Licensed under the [Functional Source License, Version 1.1, ALv2 Future License](./LICENSE) ([FSL-1.1-ALv2](https://fsl.software/)), inherited from Kody Video. You may use, copy, modify, and redistribute the software for any purpose other than **Competing Use** — making it available to others in a commercial product or service that substitutes for the licensed software or offers substantially similar functionality. Each version becomes available under the Apache License 2.0 on the second anniversary of its release.

@@ -382,9 +382,9 @@ a {
   gap: 8px;
   font-family: var(--font-mono);
   font-stretch: 80%;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 600;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1), background 160ms ease,
     opacity 160ms ease, border-color 160ms ease;
