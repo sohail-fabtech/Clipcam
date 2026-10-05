@@ -82,7 +82,7 @@
 .editor-film-orientation button.is-active {
   color: #0b0d10;
   -webkit-text-fill-color: #0b0d10;
-  background: #ffd400;
+  background: #f2f3f5;
 }
 
 @media (prefers-color-scheme: light) {
@@ -97,9 +97,9 @@
   }
 
   .editor-film-orientation button.is-active {
-    color: #0b0d10;
-    -webkit-text-fill-color: #0b0d10;
-    background: #ffd400;
+    color: #fff;
+    -webkit-text-fill-color: #fff;
+    background: #0b0d10;
   }
 }
 
@@ -769,7 +769,7 @@
 .audio-fade-toggle input[type='checkbox'] {
   width: 15px;
   height: 15px;
-  accent-color: var(--accent);
+  accent-color: var(--ink);
   margin: 0;
 }
 
@@ -809,7 +809,7 @@
   flex: 1 1 auto;
   min-width: 40px;
   height: 26px;
-  accent-color: var(--accent);
+  accent-color: var(--ink);
   touch-action: pan-y;
 }
 
@@ -921,7 +921,7 @@
   flex: 1 1 auto;
   min-width: 40px;
   height: 26px;
-  accent-color: var(--accent);
+  accent-color: var(--ink);
   touch-action: pan-y;
 }
 
@@ -1018,12 +1018,12 @@
 }
 
 .editor-action.prominent {
-  background: var(--accent);
-  color: var(--accent-ink);
+  background: var(--ink);
+  color: var(--bg);
 }
 
 .editor-action.prominent .editor-action-label {
-  color: var(--accent-ink);
+  color: var(--bg);
   font-weight: 700;
 }
 
